@@ -29,9 +29,6 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
       # Use npm install (not npm ci) because there is no package-lock.json
       - name: Install dependencies
         run: npm install
@@ -42,6 +39,12 @@ jobs:
         env:
           # Suppress any missing VITE_ env vars that aren't needed for the build
           VITE_API_BASE_URL: ''
+
+      # Accept Android SDK licenses (SDK is pre-installed on ubuntu-latest)
+      - name: Accept Android SDK licenses
+        run: yes | sdkmanager --licenses || true
+        env:
+          ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
 
       - name: Add Capacitor Android platform
         run: npx cap add android
