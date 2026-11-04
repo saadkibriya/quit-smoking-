@@ -31,7 +31,7 @@ jobs:
 
       # Use npm install (not npm ci) because there is no package-lock.json
       - name: Install dependencies
-        run: npm install
+        run: npm install --legacy-peer-deps
 
       # Build the Vite bundle â†’ dist/  (capacitor.config.ts points webDir to dist)
       - name: Build web app
