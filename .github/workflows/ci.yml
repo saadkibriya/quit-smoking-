@@ -19,7 +19,7 @@ jobs:
           node-version: 22
 
       - name: Install dependencies
-        run: npm install
+        run: npm install --legacy-peer-deps
 
       - name: Run lint and type check
         run: npm run lint
