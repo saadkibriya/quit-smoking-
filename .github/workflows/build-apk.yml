@@ -8,10 +8,6 @@ on:
 permissions:
   contents: write
 
-env:
-  ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
-  ANDROID_HOME: /usr/local/lib/android/sdk
-
 jobs:
   build-apk:
     name: Build debug APK
@@ -32,35 +28,25 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      # Install ALL deps including devDependencies (NODE_ENV must not be production)
       - name: Install dependencies
         run: npm install --legacy-peer-deps
-        env:
-          NODE_ENV: development
 
-      # Build the Vite bundle â†’ dist/  (capacitor.config.ts points webDir to dist)
       - name: Build web app
         run: npm run build
         env:
           VITE_API_BASE_URL: ''
 
-      # Accept Android SDK licenses
       - name: Accept Android SDK licenses
         run: yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
-      # Verify cap CLI is present, then add android platform
       - name: Add Capacitor Android platform
         run: |
-          ls node_modules/.bin/cap || (echo "cap not found, reinstalling @capacitor/cli" && npm install --legacy-peer-deps --save-dev @capacitor/cli)
-          node_modules/.bin/cap add android
-        env:
-          NODE_ENV: development
-          CAPACITOR_ANDROID_STUDIO_PATH: ''
+          if [ ! -d "android" ]; then
+            npx cap add android
+          fi
 
       - name: Sync Capacitor
-        run: node_modules/.bin/cap sync android
-        env:
-          NODE_ENV: development
+        run: npx cap sync android
 
       - name: Make gradlew executable
         run: chmod +x android/gradlew
