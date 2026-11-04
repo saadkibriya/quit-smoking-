@@ -8,6 +8,10 @@ on:
 permissions:
   contents: write
 
+env:
+  ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+  ANDROID_HOME: /usr/local/lib/android/sdk
+
 jobs:
   build-apk:
     name: Build debug APK
@@ -21,7 +25,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          # No cache: 'npm' â€” repo has bun.lock not package-lock.json
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -29,28 +32,35 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      # Use npm install (not npm ci) because there is no package-lock.json
+      # Install ALL deps including devDependencies (NODE_ENV must not be production)
       - name: Install dependencies
         run: npm install --legacy-peer-deps
+        env:
+          NODE_ENV: development
 
       # Build the Vite bundle â†’ dist/  (capacitor.config.ts points webDir to dist)
       - name: Build web app
         run: npm run build
         env:
-          # Suppress any missing VITE_ env vars that aren't needed for the build
           VITE_API_BASE_URL: ''
 
-      # Accept Android SDK licenses (SDK is pre-installed on ubuntu-latest)
+      # Accept Android SDK licenses
       - name: Accept Android SDK licenses
-        run: yes | sdkmanager --licenses || true
-        env:
-          ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+        run: yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
+      # Verify cap CLI is present, then add android platform
       - name: Add Capacitor Android platform
-        run: ./node_modules/.bin/cap add android
+        run: |
+          ls node_modules/.bin/cap || (echo "cap not found, reinstalling @capacitor/cli" && npm install --legacy-peer-deps --save-dev @capacitor/cli)
+          node_modules/.bin/cap add android
+        env:
+          NODE_ENV: development
+          CAPACITOR_ANDROID_STUDIO_PATH: ''
 
       - name: Sync Capacitor
-        run: ./node_modules/.bin/cap sync android
+        run: node_modules/.bin/cap sync android
+        env:
+          NODE_ENV: development
 
       - name: Make gradlew executable
         run: chmod +x android/gradlew
