@@ -1,0 +1,6 @@
+{
+  "name": "Unlit",
+  "description": "Evidence-based quit-smoking tracker and dual-persona mentor + doctor with non-punitive slip recovery, adaptive milestone sprints, and offline-first Pixel monochrome design.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

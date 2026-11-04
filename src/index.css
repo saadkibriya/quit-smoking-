@@ -1,0 +1,79 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  :root {
+    --bg: #ffffff;
+    --surface: #f2f2f2;
+    --surface-high: #e2e2e2;
+    --outline: #c4c4c4;
+    --text-main: #000000;
+    --text-sec: #5e5e5e;
+    --inverse-bg: #000000;
+    --inverse-text: #ffffff;
+  }
+
+  .dark {
+    --bg: #000000;
+    --surface: #141414;
+    --surface-high: #262626;
+    --outline: #3d3d3d;
+    --text-main: #ffffff;
+    --text-sec: #a6a6a6;
+    --inverse-bg: #ffffff;
+    --inverse-text: #000000;
+  }
+
+  body {
+    background-color: var(--bg);
+    color: var(--text-main);
+    font-family: -apple-system, BlinkMacSystemFont, "Google Sans", "Google Sans Flex", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    margin: 0;
+    padding: 0;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Prevent overscroll bounce on mobile frame */
+  html, body {
+    height: 100%;
+    overscroll-behavior-y: none;
+  }
+
+  /* Ensure numbers align vertically */
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* Material 3 Expressive Badges shapes (Monochrome solid) */
+.shape-cookie {
+  clip-path: polygon(50% 0%, 65% 10%, 82% 5%, 88% 22%, 100% 35%, 95% 52%, 100% 68%, 88% 80%, 82% 96%, 64% 91%, 50% 100%, 35% 91%, 18% 96%, 12% 80%, 0% 68%, 5% 52%, 0% 35%, 12% 22%, 18% 5%, 35% 10%);
+}
+
+.shape-clover {
+  clip-path: polygon(50% 0%, 80% 10%, 100% 35%, 90% 65%, 100% 90%, 65% 90%, 50% 100%, 35% 90%, 0% 90%, 10% 65%, 0% 35%, 20% 10%);
+}
+
+.shape-starburst {
+  clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+}
+
+.shape-diamond {
+  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+}
+
+/* Scrollbar styling - minimal monochrome */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--outline);
+  border-radius: 9999px;
+}
