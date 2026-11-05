@@ -15,6 +15,10 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
   mode,
 }) => {
   const [showManualModal, setShowManualModal] = useState(false);
+  const [manualDate, setManualDate] = useState(() => {
+    const d = new Date();
+    return d.toISOString().split('T')[0];
+  });
   const [manualTime, setManualTime] = useState(() => {
     const d = new Date();
     return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
@@ -54,9 +58,9 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
 
   const submitManual = () => {
     Sound.tick();
+    const [year, month, day] = manualDate.split('-').map(Number);
     const [hours, minutes] = manualTime.split(':').map(Number);
-    const d = new Date();
-    d.setHours(hours, minutes, 0, 0);
+    const d = new Date(year, month - 1, day, hours || 0, minutes || 0, 0);
 
     onLogCigarette({
       timestamp: d.getTime(),
@@ -98,7 +102,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
             <span className="font-extrabold text-base tracking-tight">I smoked</span>
           </div>
           <span className="text-[11px] font-medium text-[#5E5E5E] dark:text-[#A6A6A6]">
-            One tap · Hold for earlier
+            One tap Â· Hold for earlier
           </span>
         </button>
 
@@ -133,16 +137,29 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
             </p>
 
             <div className="space-y-4">
-              <div>
-                <label className="text-xs font-bold text-black dark:text-white block mb-1">
-                  Time
-                </label>
-                <input
-                  type="time"
-                  value={manualTime}
-                  onChange={(e) => setManualTime(e.target.value)}
-                  className="w-full h-12 px-3 rounded-2xl bg-[#F2F2F2] dark:bg-[#262626] border border-[#C4C4C4] dark:border-[#3D3D3D] text-black dark:text-white font-mono text-base font-bold"
-                />
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-xs font-bold text-black dark:text-white block mb-1">
+                    Date
+                  </label>
+                  <input
+                    type="date"
+                    value={manualDate}
+                    onChange={(e) => setManualDate(e.target.value)}
+                    className="w-full h-12 px-3 rounded-2xl bg-[#F2F2F2] dark:bg-[#262626] border border-[#C4C4C4] dark:border-[#3D3D3D] text-black dark:text-white font-mono text-xs font-bold"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-black dark:text-white block mb-1">
+                    Time
+                  </label>
+                  <input
+                    type="time"
+                    value={manualTime}
+                    onChange={(e) => setManualTime(e.target.value)}
+                    className="w-full h-12 px-3 rounded-2xl bg-[#F2F2F2] dark:bg-[#262626] border border-[#C4C4C4] dark:border-[#3D3D3D] text-black dark:text-white font-mono text-xs font-bold"
+                  />
+                </div>
               </div>
 
               <div>
