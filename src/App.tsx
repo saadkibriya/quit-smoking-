@@ -218,6 +218,7 @@ export default function App() {
           currentTheme={resolvedTheme}
           onToggleTheme={handleToggleTheme}
           onOpenSos={() => setShowSosModal(true)}
+          onOpenWidgets={() => setShowWidgetSimulator(true)}
           dayGreeting={dayGreeting}
         />
 
