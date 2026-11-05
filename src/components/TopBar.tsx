@@ -8,6 +8,7 @@ interface TopBarProps {
   currentTheme: 'DAY' | 'NIGHT';
   onToggleTheme: () => void;
   onOpenSos: () => void;
+  onOpenWidgets?: () => void;
   dayGreeting?: string;
 }
 
@@ -16,7 +17,8 @@ export const TopBar: React.FC<TopBarProps> = ({
   currentTheme,
   onToggleTheme,
   onOpenSos,
-  dayGreeting = 'Day 4 · Round 1',
+  onOpenWidgets,
+  dayGreeting = 'Day 4 Â· Round 1',
 }) => {
   return (
     <header className="sticky top-0 z-30 w-full bg-[#FFFFFF] dark:bg-[#000000] border-b border-[#C4C4C4] dark:border-[#3D3D3D] px-4 py-2.5 transition-colors">
@@ -38,8 +40,24 @@ export const TopBar: React.FC<TopBarProps> = ({
           </div>
         </div>
 
-        {/* Right actions: Theme toggle and prominent SOS button */}
+        {/* Right actions: Theme toggle, Widget button, and prominent SOS button */}
         <div className="flex items-center gap-2">
+          {/* Home Widgets button */}
+          {onOpenWidgets && (
+            <button
+              onClick={() => {
+                Sound.tick();
+                onOpenWidgets();
+              }}
+              title="Home Screen Widgets Preview"
+              aria-label="Home Screen Widgets"
+              className="h-10 px-3 rounded-full flex items-center gap-1.5 border border-[#C4C4C4] dark:border-[#3D3D3D] text-black dark:text-white hover:bg-[#F2F2F2] dark:hover:bg-[#141414] active:scale-95 transition text-xs font-bold"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Widgets</span>
+            </button>
+          )}
+
           {/* Day / Night quick toggle */}
           <button
             onClick={() => {
