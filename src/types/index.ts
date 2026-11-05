@@ -98,6 +98,7 @@ export interface UserPlan {
   customMilestones: CustomMilestone[];
   widgetLayout: WidgetLayoutItem[];
   ifThenPlans: IfThenPlan[];
+  geminiApiKey?: string;
 }
 
 export interface QuitAttempt {
