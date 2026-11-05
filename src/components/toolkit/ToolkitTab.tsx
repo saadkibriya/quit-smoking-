@@ -7,6 +7,8 @@ import { SYMPTOM_CARDS, DAY_BY_DAY_GUIDE, getNormalGuideForDay } from '../../con
 import { ACADEMIC_SOURCES } from '../../content/sources';
 import { calculateDependenceScore, calculateCurrentStreak, calculateSmokeFreeDays, toLocalDateString } from '../../domain/calculations';
 import { getToneMessage } from '../../domain/rulesEngine';
+import { askGeminiCoach } from '../../domain/aiCoach';
+import { generateCharacterCertificateMarkdown } from '../../domain/markdownReport';
 import {
   Sun,
   Moon,
@@ -35,6 +37,8 @@ import {
   Send,
   Sliders,
   Award,
+  Key,
+  Check,
 } from 'lucide-react';
 
 interface ToolkitTabProps {
@@ -71,6 +75,8 @@ export const ToolkitTab: React.FC<ToolkitTabProps> = ({
   const [coachInput, setCoachInput] = useState('');
   const [coachLoading, setCoachLoading] = useState(false);
   const [weeklyReviewText, setWeeklyReviewText] = useState<string | null>(null);
+  const [apiKeyInput, setApiKeyInput] = useState(plan.geminiApiKey || '');
+  const [showKeySaved, setShowKeySaved] = useState(false);
 
   // Health / Doctor notes state
   const [doctorPhone, setDoctorPhone] = useState(plan.supportContact.phone || '');
@@ -95,7 +101,7 @@ export const ToolkitTab: React.FC<ToolkitTabProps> = ({
     setActiveSection(activeSection === id ? null : id);
   };
 
-  // Chat with Gemini coach (or fallback to offline rules engine)
+  // Chat with Gemini coach (capable of updating plan and tracking data!)
   const handleSendCoach = async () => {
     if (!coachInput.trim() || coachLoading) return;
 
@@ -111,82 +117,36 @@ export const ToolkitTab: React.FC<ToolkitTabProps> = ({
     };
     onSaveChatMessage(userMsg);
 
-    // Crisis phrases check on client
-    const lower = userText.toLowerCase();
-    const hasCrisis = [
-      'kill myself',
-      'suicide',
-      'self-harm',
-      'want to die',
-      'end it all',
-      'end my life',
-    ].some((term) => lower.includes(term));
-
-    if (hasCrisis) {
-      const alertMsg: ChatMessage = {
-        id: `msg_alert_${Date.now()}`,
-        sender: 'coach',
-        text: 'You matter. If you might act on these thoughts, please contact local emergency services or a crisis line now, or reach out to someone you trust.',
-        timestamp: Date.now(),
-        isSafetyAlert: true,
-      };
-      onSaveChatMessage(alertMsg);
-      return;
-    }
-
     setCoachLoading(true);
 
     try {
-      if (plan.aiCoachEnabled) {
-        const response = await fetch('/api/gemini/coach', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userMessage: userText,
-            coachStyle: plan.coachStyle,
-            summaryJson: {
-              mode: plan.mode,
-              streakDays: streak.days,
-              streakHours: Math.round(streak.streakHours),
-              smokeFreeDaysTotal: smokeFree.completedSmokeFreeDays,
-              topTriggers: plan.triggers,
-              coachStyle: plan.coachStyle,
-              reasons: plan.reasons,
-            },
-            factsList: 'Russell Standard allows early slips. 28 days = 5x quit likelihood. Withdrawal peaks in week 1. 20 min life per cig avoided.',
-            chatHistory: chatMessages.slice(-6),
-          }),
-        });
+      const coachResp = await askGeminiCoach({
+        userMessage: userText,
+        plan,
+        entries,
+        chatHistory: chatMessages,
+        userApiKey: plan.geminiApiKey,
+      });
 
-        if (response.ok) {
-          const data = await response.json();
-          onSaveChatMessage({
-            id: `msg_reply_${Date.now()}`,
-            sender: 'coach',
-            text: data.reply || "I'm with you. What feels like the hardest part right now?",
-            timestamp: Date.now(),
-            isSafetyAlert: data.isSafetyAlert,
-          });
-          setCoachLoading(false);
-          return;
-        }
+      // If AI coach modified plan (e.g. quit date, pack price, triggers, currency)
+      if (coachResp.suggestedPlanUpdates) {
+        const updated = { ...plan, ...coachResp.suggestedPlanUpdates };
+        onUpdatePlan(updated);
+        Storage.savePlan(updated);
       }
 
-      // Offline rules coach fallback
-      const offlineReply = getToneMessage('DAY_4', plan.coachStyle, {
-        smokeFreeDays: smokeFree.completedSmokeFreeDays,
-      });
       onSaveChatMessage({
         id: `msg_reply_${Date.now()}`,
         sender: 'coach',
-        text: `${offlineReply} Remember: one craving at a time. What strategy works best for you right now?`,
+        text: coachResp.reply,
         timestamp: Date.now(),
+        isSafetyAlert: coachResp.isSafetyAlert,
       });
-    } catch {
+    } catch (err: any) {
       onSaveChatMessage({
         id: `msg_reply_${Date.now()}`,
         sender: 'coach',
-        text: 'I hear you. Take a slow, deep breath. Every craving rises, peaks, and naturally passes in a few minutes. You have the strength to ride this out.',
+        text: 'I hear you. Take a slow, deep breath. Every craving peaks and passes in 3-5 minutes. You are in control.',
         timestamp: Date.now(),
       });
     } finally {
@@ -233,6 +193,22 @@ export const ToolkitTab: React.FC<ToolkitTabProps> = ({
   };
 
   // Export / Import
+  const handleExportMarkdownCertificate = () => {
+    Sound.celebrate();
+    const md = generateCharacterCertificateMarkdown({
+      plan,
+      entries,
+      attempts: Storage.getAttempts(),
+      badges: Storage.getBadges(),
+    });
+    const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Unlit_Character_Certificate_${toLocalDateString(Date.now())}.md`;
+    a.click();
+  };
+
   const handleExportJson = () => {
     Sound.tick();
     const data = Storage.exportJson();
@@ -496,7 +472,7 @@ export const ToolkitTab: React.FC<ToolkitTabProps> = ({
                 <div className="flex items-center gap-2 pt-2">
                   <input
                     type="text"
-                    placeholder="Type message to coach..."
+                    placeholder="Ask coach or say 'I quit 3 days ago'..."
                     value={coachInput}
                     onChange={(e) => setCoachInput(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleSendCoach()}
@@ -511,6 +487,46 @@ export const ToolkitTab: React.FC<ToolkitTabProps> = ({
                   </button>
                 </div>
 
+                {/* Gemini API Key inline configuration */}
+                <div className="p-3 rounded-2xl bg-[#F2F2F2] dark:bg-[#141414] border border-[#C4C4C4] dark:border-[#3D3D3D] space-y-2 mt-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-black dark:text-white flex items-center gap-1.5">
+                      <Key className="w-3.5 h-3.5" />
+                      Gemini API Key (Optional for Cloud AI)
+                    </span>
+                    {showKeySaved && (
+                      <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
+                        <Check className="w-3 h-3" /> Saved!
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      type="password"
+                      placeholder="Paste Gemini API Key (starts with AIza...)"
+                      value={apiKeyInput}
+                      onChange={(e) => setApiKeyInput(e.target.value)}
+                      className="flex-1 h-9 px-3 rounded-xl bg-white dark:bg-[#262626] border border-[#C4C4C4] dark:border-[#3D3D3D] text-[11px] font-mono text-black dark:text-white"
+                    />
+                    <button
+                      onClick={() => {
+                        Sound.celebrate();
+                        const updated = { ...plan, geminiApiKey: apiKeyInput.trim() || undefined };
+                        onUpdatePlan(updated);
+                        Storage.savePlan(updated);
+                        setShowKeySaved(true);
+                        setTimeout(() => setShowKeySaved(false), 3000);
+                      }}
+                      className="px-3 h-9 rounded-xl bg-black dark:bg-white text-white dark:text-black text-[11px] font-bold shrink-0 active:scale-95 transition"
+                    >
+                      Save Key
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-[#5E5E5E] dark:text-[#A6A6A6]">
+                    Stored locally in your device's private storage. Enables the AI coach to chat, monitor your progress, and adjust your plan on voice/text request.
+                  </p>
+                </div>
+
                 <div className="flex items-center justify-between pt-1">
                   <button
                     onClick={() => {
@@ -522,7 +538,7 @@ export const ToolkitTab: React.FC<ToolkitTabProps> = ({
                     Clear chat history
                   </button>
                   <span className="text-[10px] text-[#5E5E5E] dark:text-[#A6A6A6]">
-                    Consent-based AI · Under 80 words
+                    Autonomous AI Coach Â· Can update your plan
                   </span>
                 </div>
               </div>
@@ -690,7 +706,7 @@ export const ToolkitTab: React.FC<ToolkitTabProps> = ({
                   <ul className="space-y-1.5 text-[11px] text-[#5E5E5E] dark:text-[#A6A6A6]">
                     {DOCTOR_SAFETY_CHECKLIST.map((chk, i) => (
                       <li key={i}>
-                        <span className="font-bold text-black dark:text-white">• {chk.condition}: </span>
+                        <span className="font-bold text-black dark:text-white">â€¢ {chk.condition}: </span>
                         <span>{chk.guidance}</span>
                       </li>
                     ))}
@@ -937,8 +953,21 @@ export const ToolkitTab: React.FC<ToolkitTabProps> = ({
             {/* Export and Import */}
             <div>
               <span className="font-bold text-black dark:text-white block mb-1">
-                Data Portability (Zero Vendor Lock-in)
+                Data Portability & Character Dossier
               </span>
+              <p className="text-[11px] text-[#5E5E5E] dark:text-[#A6A6A6] mb-2.5">
+                Export your full progress dossier in Markdown (.md) to share with external AI models (ChatGPT, Claude, Gemini) or download raw JSON/CSV backups.
+              </p>
+
+              {/* Character Certificate Export Button */}
+              <button
+                onClick={handleExportMarkdownCertificate}
+                className="w-full h-11 px-4 mb-2 rounded-xl bg-black dark:bg-white text-white dark:text-black font-bold text-[11px] flex items-center justify-center gap-2 active:scale-95 transition shadow-xs"
+              >
+                <Award className="w-4 h-4" />
+                <span>Export Character Certificate (.md Report)</span>
+              </button>
+
               <div className="grid grid-cols-2 gap-2 mt-2">
                 <button
                   onClick={handleExportJson}
@@ -1214,7 +1243,7 @@ export const ToolkitTab: React.FC<ToolkitTabProps> = ({
                     {src.title} ({src.year})
                   </a>
                   <p className="text-[10px] text-[#5E5E5E] dark:text-[#A6A6A6]">
-                    {src.authors} · {src.journal}
+                    {src.authors} Â· {src.journal}
                   </p>
                   <p className="text-[10px] text-black dark:text-white mt-1">
                     {src.takeaway}
