@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { UserPlan, HabitMode, CoachStyle, TimeToFirstCigarette, IfThenPlan } from '../../types';
 import { Sound } from '../../data/sound';
+import { parseOnboardingText } from '../../domain/aiParser';
 import { ArrowRight, ArrowLeft, Check, Sparkles, Shield, Heart } from 'lucide-react';
 
 interface OnboardingWizardProps {
@@ -26,6 +27,10 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   const [customQuitDate, setCustomQuitDate] = useState<string>(() => {
     const d = new Date();
     return d.toISOString().split('T')[0];
+  });
+  const [customQuitTime, setCustomQuitTime] = useState<string>(() => {
+    const d = new Date();
+    return d.toTimeString().slice(0, 5); // "HH:MM"
   });
   const [pastTries, setPastTries] = useState<string>('1 to 2');
   const [longestStreak, setLongestStreak] = useState<string>('7');
@@ -74,26 +79,29 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     setAiLoading(true);
     Sound.tick();
     try {
-      const res = await fetch('/api/gemini/onboard', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ textPrompt: aiInput }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        const p = data.plan;
-        if (p.cigarettesPerDay) setUsualCount(p.cigarettesPerDay);
-        if (p.timeToFirstCigarette) setTtfc(p.timeToFirstCigarette);
-        if (p.packPrice) setPackPrice(p.packPrice);
-        if (p.mode) setMode(p.mode);
-        if (Array.isArray(p.triggers)) setTriggers(p.triggers);
-        if (Array.isArray(p.reasons)) setReasons(p.reasons);
-        if (p.coachStyle) setCoachStyle(p.coachStyle);
-        Sound.celebrate();
-        setStep(15); // Jump straight to Your Plan confirmation
+      const parsed = await parseOnboardingText(aiInput, initialPlan.geminiApiKey);
+      if (parsed.cigarettesPerDay) setUsualCount(parsed.cigarettesPerDay);
+      if (parsed.timeToFirstCigarette) setTtfc(parsed.timeToFirstCigarette);
+      if (parsed.packPrice) setPackPrice(parsed.packPrice);
+      if (parsed.currency) setCurrency(parsed.currency);
+      if (parsed.mode) setMode(parsed.mode);
+      if (Array.isArray(parsed.triggers) && parsed.triggers.length > 0) setTriggers(parsed.triggers);
+      if (Array.isArray(parsed.reasons) && parsed.reasons.length > 0) setReasons(parsed.reasons);
+      if (parsed.coachStyle) setCoachStyle(parsed.coachStyle);
+      
+      // If user indicated they quit X days ago
+      if (typeof parsed.daysQuitAgo === 'number' && parsed.daysQuitAgo > 0) {
+        const pastDate = new Date(Date.now() - parsed.daysQuitAgo * 86400 * 1000);
+        setQuitDateChoice('CUSTOM');
+        setCustomQuitDate(pastDate.toISOString().split('T')[0]);
+        setCustomQuitTime(pastDate.toTimeString().slice(0, 5));
       }
-    } catch {
-      alert('Could not parse text. Continuing with step-by-step.');
+
+      Sound.celebrate();
+      setStep(15); // Jump straight to Your Plan confirmation
+    } catch (err) {
+      console.warn('AI Parsing error', err);
+      alert('Could not fully parse text. Continuing with step-by-step.');
     } finally {
       setAiLoading(false);
     }
@@ -115,7 +123,10 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
       const d = new Date(today.getFullYear(), today.getMonth() + 1, 1);
       finalQuitDate = d.toISOString();
     } else if (quitDateChoice === 'CUSTOM') {
-      finalQuitDate = new Date(customQuitDate).toISOString();
+      const [year, month, day] = customQuitDate.split('-').map(Number);
+      const [hours, minutes] = (customQuitTime || '00:00').split(':').map(Number);
+      const customD = new Date(year, month - 1, day, hours || 0, minutes || 0, 0);
+      finalQuitDate = customD.toISOString();
     }
 
     const defaultIfThens: IfThenPlan[] = triggers.slice(0, 3).map((trig, idx) => ({
@@ -209,7 +220,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         {step === 1 && (
           <div className="space-y-4">
             <div className="w-10 h-10 rounded-2xl bg-black dark:bg-white text-white dark:text-black flex items-center justify-center font-bold">
-              ✓
+              âœ“
             </div>
             <h2 className="text-3xl font-black tracking-tight">
               Welcome to Unlit.
@@ -349,18 +360,18 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                 <label className="font-bold text-black dark:text-white block mb-1">
                   Currency Symbol
                 </label>
-                <div className="flex gap-2">
-                  {['$', '€', '£', '¥', '₹', 'C$'].map((c) => (
+                <div className="flex flex-wrap gap-2">
+                  {['à§³', '$', 'â‚¬', 'Â£', 'â‚¹', 'Â¥', 'C$'].map((c) => (
                     <button
                       key={c}
                       onClick={() => setCurrency(c)}
-                      className={`px-3 py-1.5 rounded-xl border text-xs font-bold ${
+                      className={`px-3.5 py-1.5 rounded-xl border text-xs font-bold transition ${
                         currency === c
                           ? 'bg-black text-white dark:bg-white dark:text-black border-transparent'
-                          : 'border-[#C4C4C4] dark:border-[#3D3D3D]'
+                          : 'border-[#C4C4C4] dark:border-[#3D3D3D] text-black dark:text-white'
                       }`}
                     >
-                      {c}
+                      {c === 'à§³' ? 'à§³ (BDT)' : c}
                     </button>
                   ))}
                 </div>
@@ -451,17 +462,23 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
 
             <div className="space-y-2.5">
               {[
-                { id: 'TODAY', label: 'Today (Start now)' },
+                { id: 'TODAY', label: 'Today (Start right now)' },
+                { id: 'ALREADY_QUIT', label: 'Already quit in the past (e.g. 3 days ago)' },
                 { id: 'TOMORROW', label: 'Tomorrow morning' },
                 { id: 'NEXT_MONDAY', label: 'Next Monday (Fresh start landmark)' },
                 { id: 'FIRST_NEXT_MONTH', label: '1st of next month' },
-                { id: 'CUSTOM', label: 'Pick a specific date' },
+                { id: 'CUSTOM', label: 'Pick a specific custom date & time' },
               ].map((opt) => (
                 <button
                   key={opt.id}
                   onClick={() => {
                     Sound.tick();
                     setQuitDateChoice(opt.id);
+                    if (opt.id === 'ALREADY_QUIT') {
+                      const d = new Date(Date.now() - 3 * 86400 * 1000);
+                      setCustomQuitDate(d.toISOString().split('T')[0]);
+                      setCustomQuitTime(d.toTimeString().slice(0, 5));
+                    }
                   }}
                   className={`w-full p-3.5 rounded-2xl border text-left text-xs font-bold transition ${
                     quitDateChoice === opt.id
@@ -474,13 +491,39 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
               ))}
             </div>
 
-            {quitDateChoice === 'CUSTOM' && (
-              <input
-                type="date"
-                value={customQuitDate}
-                onChange={(e) => setCustomQuitDate(e.target.value)}
-                className="w-full h-12 px-3 rounded-2xl bg-[#F2F2F2] dark:bg-[#262626] border border-[#C4C4C4] dark:border-[#3D3D3D] text-xs font-mono font-bold"
-              />
+            {(quitDateChoice === 'CUSTOM' || quitDateChoice === 'ALREADY_QUIT') && (
+              <div className="p-3.5 rounded-2xl bg-[#F2F2F2] dark:bg-[#141414] border border-[#C4C4C4] dark:border-[#3D3D3D] space-y-3">
+                <p className="text-xs font-bold text-black dark:text-white">
+                  When did you smoke your last cigarette?
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[11px] text-[#5E5E5E] dark:text-[#A6A6A6] block mb-1">
+                      Quit Date
+                    </label>
+                    <input
+                      type="date"
+                      value={customQuitDate}
+                      onChange={(e) => setCustomQuitDate(e.target.value)}
+                      className="w-full h-11 px-3 rounded-xl bg-white dark:bg-[#262626] border border-[#C4C4C4] dark:border-[#3D3D3D] text-xs font-mono font-bold text-black dark:text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] text-[#5E5E5E] dark:text-[#A6A6A6] block mb-1">
+                      Exact Time
+                    </label>
+                    <input
+                      type="time"
+                      value={customQuitTime}
+                      onChange={(e) => setCustomQuitTime(e.target.value)}
+                      className="w-full h-11 px-3 rounded-xl bg-white dark:bg-[#262626] border border-[#C4C4C4] dark:border-[#3D3D3D] text-xs font-mono font-bold text-black dark:text-white"
+                    />
+                  </div>
+                </div>
+                <p className="text-[11px] text-[#5E5E5E] dark:text-[#A6A6A6]">
+                  Your smoke-free clock and savings will count immediately from this exact moment.
+                </p>
+              </div>
             )}
           </div>
         )}
@@ -629,7 +672,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                 {
                   id: 'DIRECT',
                   title: 'Straight talker',
-                  sample: '"That was one slip, not a surrender. Let’s focus on the next hour."',
+                  sample: '"That was one slip, not a surrender. Letâ€™s focus on the next hour."',
                 },
                 {
                   id: 'SCIENCE',
@@ -802,7 +845,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           <div className="space-y-4 animate-in fade-in duration-200">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-full bg-black dark:bg-white text-white dark:text-black flex items-center justify-center font-bold text-sm">
-                ✓
+                âœ“
               </div>
               <h2 className="text-2xl font-black tracking-tight">Your Plan</h2>
             </div>
@@ -826,7 +869,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                 <ul className="space-y-1 text-[#5E5E5E] dark:text-[#A6A6A6] text-[11px]">
                   {triggers.slice(0, 3).map((t) => (
                     <li key={t}>
-                      • <strong className="text-black dark:text-white capitalize">{t.replace(/_/g, ' ')}: </strong>
+                      â€¢ <strong className="text-black dark:text-white capitalize">{t.replace(/_/g, ' ')}: </strong>
                       Swap routine & drink ice water
                     </li>
                   ))}
@@ -866,7 +909,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                 }}
                 className="flex-2 h-12 rounded-full bg-black dark:bg-white text-white dark:text-black text-xs font-bold active:scale-95 transition"
               >
-                Looks good · Let's begin
+                Looks good Â· Let's begin
               </button>
             </div>
           </div>
