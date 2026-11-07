@@ -12,7 +12,7 @@ interface BottomNavProps {
 export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, onChangeTab }) => {
   const tabs: Array<{ id: TabId; label: string; icon: React.ReactNode }> = [
     { id: 'today', label: 'Today', icon: <Calendar className="w-5 h-5" /> },
-    { id: 'journey', label: 'Journey', icon: <Compass className="w-5 h-5" /> },
+    { id: 'journey', label: 'Progress', icon: <Compass className="w-5 h-5" /> },
     { id: 'toolkit', label: 'Toolkit', icon: <Wrench className="w-5 h-5" /> },
   ];
 

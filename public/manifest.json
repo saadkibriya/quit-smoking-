@@ -1,0 +1,40 @@
+{
+  "name": "Unlit — Quit-Smoking Tracker",
+  "short_name": "Unlit",
+  "description": "Evidence-based quit-smoking tracker and dual-persona mentor + doctor with Nothing OS design and live home-screen widgets.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/assets/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/assets/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Ride out a craving",
+      "short_name": "Craving",
+      "description": "Open 3-minute paced breathing craving help immediately",
+      "url": "/#craving",
+      "icons": [{ "src": "/assets/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Progress",
+      "short_name": "Progress",
+      "description": "View smoke-free days and milestones",
+      "url": "/#progress",
+      "icons": [{ "src": "/assets/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

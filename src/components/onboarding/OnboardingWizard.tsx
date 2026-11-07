@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { UserPlan, HabitMode, CoachStyle, TimeToFirstCigarette, IfThenPlan } from '../../types';
 import { Sound } from '../../data/sound';
-import { parseOnboardingText } from '../../domain/aiParser';
 import { ArrowRight, ArrowLeft, Check, Sparkles, Shield, Heart } from 'lucide-react';
 
 interface OnboardingWizardProps {
@@ -21,16 +20,20 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   const [ttfc, setTtfc] = useState<TimeToFirstCigarette>(initialPlan.timeToFirstCigarette || '6_to_30');
   const [packPrice, setPackPrice] = useState<number>(initialPlan.packPrice || 10);
   const [cigsPerPack, setCigsPerPack] = useState<number>(initialPlan.cigarettesPerPack || 20);
-  const [currency, setCurrency] = useState<string>(initialPlan.currency || '$');
+  const [currency, setCurrency] = useState<string>(initialPlan.currency || '৳');
   const [mode, setMode] = useState<HabitMode>(initialPlan.mode || 'QUIT');
-  const [quitDateChoice, setQuitDateChoice] = useState<string>('TODAY');
   const [customQuitDate, setCustomQuitDate] = useState<string>(() => {
     const d = new Date();
-    return d.toISOString().split('T')[0];
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
   });
   const [customQuitTime, setCustomQuitTime] = useState<string>(() => {
     const d = new Date();
-    return d.toTimeString().slice(0, 5); // "HH:MM"
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mm = String(d.getMinutes()).padStart(2, '0');
+    return `${hh}:${mm}`;
   });
   const [pastTries, setPastTries] = useState<string>('1 to 2');
   const [longestStreak, setLongestStreak] = useState<string>('7');
@@ -79,29 +82,26 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     setAiLoading(true);
     Sound.tick();
     try {
-      const parsed = await parseOnboardingText(aiInput, initialPlan.geminiApiKey);
-      if (parsed.cigarettesPerDay) setUsualCount(parsed.cigarettesPerDay);
-      if (parsed.timeToFirstCigarette) setTtfc(parsed.timeToFirstCigarette);
-      if (parsed.packPrice) setPackPrice(parsed.packPrice);
-      if (parsed.currency) setCurrency(parsed.currency);
-      if (parsed.mode) setMode(parsed.mode);
-      if (Array.isArray(parsed.triggers) && parsed.triggers.length > 0) setTriggers(parsed.triggers);
-      if (Array.isArray(parsed.reasons) && parsed.reasons.length > 0) setReasons(parsed.reasons);
-      if (parsed.coachStyle) setCoachStyle(parsed.coachStyle);
-      
-      // If user indicated they quit X days ago
-      if (typeof parsed.daysQuitAgo === 'number' && parsed.daysQuitAgo > 0) {
-        const pastDate = new Date(Date.now() - parsed.daysQuitAgo * 86400 * 1000);
-        setQuitDateChoice('CUSTOM');
-        setCustomQuitDate(pastDate.toISOString().split('T')[0]);
-        setCustomQuitTime(pastDate.toTimeString().slice(0, 5));
+      const res = await fetch('/api/gemini/onboard', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ textPrompt: aiInput }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const p = data.plan;
+        if (p.cigarettesPerDay) setUsualCount(p.cigarettesPerDay);
+        if (p.timeToFirstCigarette) setTtfc(p.timeToFirstCigarette);
+        if (p.packPrice) setPackPrice(p.packPrice);
+        if (p.mode) setMode(p.mode);
+        if (Array.isArray(p.triggers)) setTriggers(p.triggers);
+        if (Array.isArray(p.reasons)) setReasons(p.reasons);
+        if (p.coachStyle) setCoachStyle(p.coachStyle);
+        Sound.celebrate();
+        setStep(15); // Jump straight to Your Plan confirmation
       }
-
-      Sound.celebrate();
-      setStep(15); // Jump straight to Your Plan confirmation
-    } catch (err) {
-      console.warn('AI Parsing error', err);
-      alert('Could not fully parse text. Continuing with step-by-step.');
+    } catch {
+      alert('Could not parse text. Continuing with step-by-step.');
     } finally {
       setAiLoading(false);
     }
@@ -109,24 +109,15 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
 
   const buildFinalPlan = (): UserPlan => {
     let finalQuitDate = new Date().toISOString();
-    const today = new Date();
-
-    if (quitDateChoice === 'TOMORROW') {
-      const d = new Date(today);
-      d.setDate(today.getDate() + 1);
-      finalQuitDate = d.toISOString();
-    } else if (quitDateChoice === 'NEXT_MONDAY') {
-      const d = new Date(today);
-      d.setDate(today.getDate() + ((7 - today.getDay() + 1) % 7 || 7));
-      finalQuitDate = d.toISOString();
-    } else if (quitDateChoice === 'FIRST_NEXT_MONTH') {
-      const d = new Date(today.getFullYear(), today.getMonth() + 1, 1);
-      finalQuitDate = d.toISOString();
-    } else if (quitDateChoice === 'CUSTOM') {
+    try {
       const [year, month, day] = customQuitDate.split('-').map(Number);
-      const [hours, minutes] = (customQuitTime || '00:00').split(':').map(Number);
-      const customD = new Date(year, month - 1, day, hours || 0, minutes || 0, 0);
-      finalQuitDate = customD.toISOString();
+      const [hours, minutes] = customQuitTime.split(':').map(Number);
+      const d = new Date(year, (month || 1) - 1, day || 1, hours || 0, minutes || 0, 0, 0);
+      if (!isNaN(d.getTime())) {
+        finalQuitDate = d.toISOString();
+      }
+    } catch {
+      finalQuitDate = new Date().toISOString();
     }
 
     const defaultIfThens: IfThenPlan[] = triggers.slice(0, 3).map((trig, idx) => ({
@@ -220,7 +211,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         {step === 1 && (
           <div className="space-y-4">
             <div className="w-10 h-10 rounded-2xl bg-black dark:bg-white text-white dark:text-black flex items-center justify-center font-bold">
-              âœ“
+              ✓
             </div>
             <h2 className="text-3xl font-black tracking-tight">
               Welcome to Unlit.
@@ -361,17 +352,29 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                   Currency Symbol
                 </label>
                 <div className="flex flex-wrap gap-2">
-                  {['à§³', '$', 'â‚¬', 'Â£', 'â‚¹', 'Â¥', 'C$'].map((c) => (
+                  {[
+                    { symbol: '৳', label: 'BDT (৳)' },
+                    { symbol: '$', label: 'USD ($)' },
+                    { symbol: '€', label: 'EUR (€)' },
+                    { symbol: '£', label: 'GBP (£)' },
+                    { symbol: '₹', label: 'INR (₹)' },
+                    { symbol: '¥', label: 'JPY/CNY (¥)' },
+                    { symbol: 'C$', label: 'CAD (C$)' },
+                    { symbol: 'A$', label: 'AUD (A$)' },
+                  ].map((c) => (
                     <button
-                      key={c}
-                      onClick={() => setCurrency(c)}
-                      className={`px-3.5 py-1.5 rounded-xl border text-xs font-bold transition ${
-                        currency === c
+                      key={c.symbol}
+                      onClick={() => {
+                        Sound.tick();
+                        setCurrency(c.symbol);
+                      }}
+                      className={`px-3 py-1.5 rounded-xl border text-xs font-bold transition ${
+                        currency === c.symbol
                           ? 'bg-black text-white dark:bg-white dark:text-black border-transparent'
-                          : 'border-[#C4C4C4] dark:border-[#3D3D3D] text-black dark:text-white'
+                          : 'border-[#C4C4C4] dark:border-[#3D3D3D]'
                       }`}
                     >
-                      {c === 'à§³' ? 'à§³ (BDT)' : c}
+                      {c.label}
                     </button>
                   ))}
                 </div>
@@ -450,81 +453,64 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           </div>
         )}
 
-        {/* STEP 6: Quit Day Selection (if quitting) */}
+        {/* STEP 6: Single Option: Pick Quit Date and Time */}
         {step === 6 && (
           <div className="space-y-4">
             <h2 className="text-2xl font-bold tracking-tight">
-              Choose your quit day
+              Pick your quit date & time
             </h2>
             <p className="text-xs text-[#5E5E5E] dark:text-[#A6A6A6]">
-              Temporal landmarks (fresh starts) like Monday or 1st of the month boost commitment.
+              Set the exact date and time your smoke-free journey begins.
             </p>
 
-            <div className="space-y-2.5">
-              {[
-                { id: 'TODAY', label: 'Today (Start right now)' },
-                { id: 'ALREADY_QUIT', label: 'Already quit in the past (e.g. 3 days ago)' },
-                { id: 'TOMORROW', label: 'Tomorrow morning' },
-                { id: 'NEXT_MONDAY', label: 'Next Monday (Fresh start landmark)' },
-                { id: 'FIRST_NEXT_MONTH', label: '1st of next month' },
-                { id: 'CUSTOM', label: 'Pick a specific custom date & time' },
-              ].map((opt) => (
+            <div className="space-y-4 bg-[#F2F2F2] dark:bg-[#141414] p-5 rounded-3xl border border-[#C4C4C4] dark:border-[#3D3D3D]">
+              <div>
+                <label className="text-xs font-bold text-black dark:text-white block mb-1.5">
+                  Quit Date
+                </label>
+                <input
+                  type="date"
+                  value={customQuitDate}
+                  onChange={(e) => setCustomQuitDate(e.target.value)}
+                  className="w-full h-12 px-3.5 rounded-2xl bg-white dark:bg-[#262626] border border-[#C4C4C4] dark:border-[#3D3D3D] text-sm font-mono font-bold text-black dark:text-white"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-black dark:text-white block mb-1.5">
+                  Quit Time
+                </label>
+                <input
+                  type="time"
+                  value={customQuitTime}
+                  onChange={(e) => setCustomQuitTime(e.target.value)}
+                  className="w-full h-12 px-3.5 rounded-2xl bg-white dark:bg-[#262626] border border-[#C4C4C4] dark:border-[#3D3D3D] text-sm font-mono font-bold text-black dark:text-white"
+                />
+              </div>
+
+              <div className="pt-2 flex items-center justify-between border-t border-[#C4C4C4] dark:border-[#3D3D3D]">
                 <button
-                  key={opt.id}
+                  type="button"
                   onClick={() => {
                     Sound.tick();
-                    setQuitDateChoice(opt.id);
-                    if (opt.id === 'ALREADY_QUIT') {
-                      const d = new Date(Date.now() - 3 * 86400 * 1000);
-                      setCustomQuitDate(d.toISOString().split('T')[0]);
-                      setCustomQuitTime(d.toTimeString().slice(0, 5));
-                    }
+                    const now = new Date();
+                    const y = now.getFullYear();
+                    const m = String(now.getMonth() + 1).padStart(2, '0');
+                    const d = String(now.getDate()).padStart(2, '0');
+                    const hh = String(now.getHours()).padStart(2, '0');
+                    const mm = String(now.getMinutes()).padStart(2, '0');
+                    setCustomQuitDate(`${y}-${m}-${d}`);
+                    setCustomQuitTime(`${hh}:${mm}`);
                   }}
-                  className={`w-full p-3.5 rounded-2xl border text-left text-xs font-bold transition ${
-                    quitDateChoice === opt.id
-                      ? 'bg-black text-white dark:bg-white dark:text-black border-transparent'
-                      : 'bg-[#F2F2F2] dark:bg-[#141414] border-[#C4C4C4] dark:border-[#3D3D3D] text-black dark:text-white'
-                  }`}
+                  className="text-xs font-bold text-black dark:text-white underline underline-offset-2 hover:opacity-80"
                 >
-                  {opt.label}
+                  Set to right now
                 </button>
-              ))}
-            </div>
-
-            {(quitDateChoice === 'CUSTOM' || quitDateChoice === 'ALREADY_QUIT') && (
-              <div className="p-3.5 rounded-2xl bg-[#F2F2F2] dark:bg-[#141414] border border-[#C4C4C4] dark:border-[#3D3D3D] space-y-3">
-                <p className="text-xs font-bold text-black dark:text-white">
-                  When did you smoke your last cigarette?
-                </p>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="text-[11px] text-[#5E5E5E] dark:text-[#A6A6A6] block mb-1">
-                      Quit Date
-                    </label>
-                    <input
-                      type="date"
-                      value={customQuitDate}
-                      onChange={(e) => setCustomQuitDate(e.target.value)}
-                      className="w-full h-11 px-3 rounded-xl bg-white dark:bg-[#262626] border border-[#C4C4C4] dark:border-[#3D3D3D] text-xs font-mono font-bold text-black dark:text-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[11px] text-[#5E5E5E] dark:text-[#A6A6A6] block mb-1">
-                      Exact Time
-                    </label>
-                    <input
-                      type="time"
-                      value={customQuitTime}
-                      onChange={(e) => setCustomQuitTime(e.target.value)}
-                      className="w-full h-11 px-3 rounded-xl bg-white dark:bg-[#262626] border border-[#C4C4C4] dark:border-[#3D3D3D] text-xs font-mono font-bold text-black dark:text-white"
-                    />
-                  </div>
-                </div>
-                <p className="text-[11px] text-[#5E5E5E] dark:text-[#A6A6A6]">
-                  Your smoke-free clock and savings will count immediately from this exact moment.
-                </p>
+                <span className="text-[11px] font-mono text-[#8A8A8A]">
+                  {customQuitDate} at {customQuitTime}
+                </span>
               </div>
-            )}
+            </div>
           </div>
         )}
 
@@ -672,7 +658,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                 {
                   id: 'DIRECT',
                   title: 'Straight talker',
-                  sample: '"That was one slip, not a surrender. Letâ€™s focus on the next hour."',
+                  sample: '"That was one slip, not a surrender. Let’s focus on the next hour."',
                 },
                 {
                   id: 'SCIENCE',
@@ -845,7 +831,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           <div className="space-y-4 animate-in fade-in duration-200">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-full bg-black dark:bg-white text-white dark:text-black flex items-center justify-center font-bold text-sm">
-                âœ“
+                ✓
               </div>
               <h2 className="text-2xl font-black tracking-tight">Your Plan</h2>
             </div>
@@ -869,7 +855,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                 <ul className="space-y-1 text-[#5E5E5E] dark:text-[#A6A6A6] text-[11px]">
                   {triggers.slice(0, 3).map((t) => (
                     <li key={t}>
-                      â€¢ <strong className="text-black dark:text-white capitalize">{t.replace(/_/g, ' ')}: </strong>
+                      • <strong className="text-black dark:text-white capitalize">{t.replace(/_/g, ' ')}: </strong>
                       Swap routine & drink ice water
                     </li>
                   ))}
@@ -909,7 +895,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                 }}
                 className="flex-2 h-12 rounded-full bg-black dark:bg-white text-white dark:text-black text-xs font-bold active:scale-95 transition"
               >
-                Looks good Â· Let's begin
+                Looks good · Let's begin
               </button>
             </div>
           </div>

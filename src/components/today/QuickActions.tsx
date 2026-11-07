@@ -1,24 +1,25 @@
 import React, { useState, useRef } from 'react';
-import { Flame, ShieldAlert, Plus, RotateCcw, SlidersHorizontal, Check } from 'lucide-react';
+import { Wind, Flame, Clock, SlidersHorizontal, AlertCircle } from 'lucide-react';
 import { Sound } from '../../data/sound';
 import { Entry, HabitMode } from '../../types';
 
 interface QuickActionsProps {
   onLogCigarette: (entryData?: Partial<Entry>) => void;
   onOpenSos: () => void;
+  onOpenCustomize?: () => void;
   mode: HabitMode;
+  confirmBeforeLog?: boolean;
 }
 
 export const QuickActions: React.FC<QuickActionsProps> = ({
   onLogCigarette,
   onOpenSos,
+  onOpenCustomize,
   mode,
+  confirmBeforeLog = false,
 }) => {
   const [showManualModal, setShowManualModal] = useState(false);
-  const [manualDate, setManualDate] = useState(() => {
-    const d = new Date();
-    return d.toISOString().split('T')[0];
-  });
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [manualTime, setManualTime] = useState(() => {
     const d = new Date();
     return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
@@ -37,7 +38,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
       isLongPressRef.current = true;
       Sound.doubleTick();
       setShowManualModal(true);
-    }, 600); // 600ms long press threshold
+    }, 600);
   };
 
   const handleTouchEnd = () => {
@@ -52,15 +53,19 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
       isLongPressRef.current = false;
       return;
     }
+    if (confirmBeforeLog) {
+      setShowConfirmModal(true);
+      return;
+    }
     Sound.tick();
     onLogCigarette();
   };
 
   const submitManual = () => {
     Sound.tick();
-    const [year, month, day] = manualDate.split('-').map(Number);
     const [hours, minutes] = manualTime.split(':').map(Number);
-    const d = new Date(year, month - 1, day, hours || 0, minutes || 0, 0);
+    const d = new Date();
+    d.setHours(hours, minutes, 0, 0);
 
     onLogCigarette({
       timestamp: d.getTime(),
@@ -84,82 +89,139 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
   ];
 
   return (
-    <div className="w-full">
-      {/* Two Big Primary Buttons Side by Side (min 64dp / h-16 tall) */}
-      <div className="grid grid-cols-2 gap-3 my-3">
-        {/* "I smoked" Button */}
+    <div className="w-full space-y-3 my-3">
+      {/* 4. Primary Button: Large, White, Full Width (min 64dp / h-18) */}
+      <button
+        onClick={() => {
+          Sound.tick();
+          onOpenSos();
+        }}
+        aria-label="Open craving help: 3-minute breathing to get through the urge"
+        className="w-full h-18 px-5 rounded-3xl bg-white text-black flex items-center justify-between shadow-xs active:scale-[0.99] transition-all select-none hover:bg-neutral-100"
+      >
+        <div className="flex items-center gap-3.5 text-left">
+          <div className="w-10 h-10 rounded-full bg-black text-white flex items-center justify-center shrink-0">
+            <Wind className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <span className="font-extrabold text-base sm:text-lg tracking-tight block text-black leading-tight">
+              Ride out a craving
+            </span>
+            <span className="text-xs text-[#5E5E5E] font-medium leading-tight block mt-0.5">
+              3-minute breathing to get through the urge
+            </span>
+          </div>
+        </div>
+        <div className="w-2.5 h-2.5 rounded-full bg-black/20" />
+      </button>
+
+      {/* 5. Secondary Button: Outlined in red #D71921 */}
+      <div className="flex items-center gap-2">
         <button
           onClick={handleSmokedClick}
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
           onMouseDown={handleTouchStart}
           onMouseUp={handleTouchEnd}
-          aria-label="I smoked (Tap to log now, hold for earlier time)"
-          className="h-18 px-4 rounded-3xl bg-[#F2F2F2] dark:bg-[#141414] border-2 border-[#C4C4C4] dark:border-[#3D3D3D] text-black dark:text-white flex flex-col items-center justify-center gap-1 active:scale-95 transition-all shadow-xs group hover:border-black dark:hover:border-white select-none"
+          aria-label="I smoked: Logs it and restarts your timer"
+          className="flex-1 h-16 px-4 rounded-3xl bg-transparent border-2 border-[#D71921] text-black dark:text-white flex items-center justify-between active:scale-[0.99] transition-all select-none hover:bg-[#D71921]/5 text-left"
         >
-          <div className="flex items-center gap-2">
-            <Flame className="w-5 h-5 text-black dark:text-white" />
-            <span className="font-extrabold text-base tracking-tight">I smoked</span>
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-[#D71921]/15 flex items-center justify-center shrink-0">
+              <span className="w-3 h-3 rounded-full bg-[#D71921]" />
+            </div>
+            <div>
+              <span className="font-extrabold text-sm sm:text-base tracking-tight block text-[#D71921] leading-tight">
+                I smoked
+              </span>
+              <span className="text-[11px] text-[#8A8A8A] font-medium leading-tight block mt-0.5">
+                Logs it and restarts your timer
+              </span>
+            </div>
           </div>
-          <span className="text-[11px] font-medium text-[#5E5E5E] dark:text-[#A6A6A6]">
-            One tap Â· Hold for earlier
+          <span className="text-[10px] text-[#8A8A8A] font-mono shrink-0 hidden sm:inline">
+            Hold to backdate
           </span>
         </button>
 
-        {/* "Craving" Button */}
+        {/* Small button to log earlier time explicitly */}
         <button
-          onClick={() => {
-            Sound.tick();
-            onOpenSos();
-          }}
-          aria-label="Craving SOS (Instant craving help)"
-          className="h-18 px-4 rounded-3xl bg-black dark:bg-white text-white dark:text-black flex flex-col items-center justify-center gap-1 active:scale-95 transition-all shadow-sm select-none"
+          onClick={() => setShowManualModal(true)}
+          aria-label="Log a cigarette at a different time"
+          title="Log earlier cigarette"
+          className="h-16 w-12 rounded-3xl border border-[#C4C4C4] dark:border-[#3D3D3D] flex items-center justify-center text-[#8A8A8A] hover:text-black dark:hover:text-white hover:border-black dark:hover:border-white transition shrink-0"
         >
-          <div className="flex items-center gap-2">
-            <ShieldAlert className="w-5 h-5" />
-            <span className="font-extrabold text-base tracking-tight">Craving</span>
-          </div>
-          <span className="text-[11px] font-medium opacity-80">
-            Ride the urge wave
-          </span>
+          <Clock className="w-4 h-4" />
         </button>
       </div>
 
+      {/* 6. Text Link: "Customize home" */}
+      {onOpenCustomize && (
+        <div className="text-center pt-1 pb-0.5">
+          <button
+            onClick={() => {
+              Sound.tick();
+              onOpenCustomize();
+            }}
+            className="text-xs font-semibold text-[#8A8A8A] hover:text-black dark:hover:text-white underline underline-offset-4 decoration-[#8A8A8A]/50 transition-colors py-1 px-3"
+          >
+            Customize home
+          </button>
+        </div>
+      )}
+
+      {/* Confirmation modal before logging if confirmBeforeLog is active */}
+      {showConfirmModal && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-[#141414] border border-[#3D3D3D] rounded-3xl p-6 w-full max-w-sm text-white shadow-2xl">
+            <h4 className="font-bold text-base mb-1">Log a cigarette?</h4>
+            <p className="text-xs text-[#8A8A8A] mb-5">
+              This will restart your current timer. All previous smoke-free days and money saved remain intact.
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowConfirmModal(false)}
+                className="flex-1 h-11 rounded-full border border-[#3D3D3D] text-xs font-bold hover:bg-[#262626]"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setShowConfirmModal(false);
+                  Sound.tick();
+                  onLogCigarette();
+                }}
+                className="flex-1 h-11 rounded-full bg-[#D71921] text-white text-xs font-bold"
+              >
+                Yes, log it
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Manual Earlier Log Modal */}
       {showManualModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
           <div className="bg-[#FFFFFF] dark:bg-[#141414] border border-[#C4C4C4] dark:border-[#3D3D3D] rounded-3xl p-6 w-full max-w-md shadow-2xl">
             <h3 className="text-lg font-bold text-black dark:text-white mb-1">
               Log Earlier Cigarette
             </h3>
-            <p className="text-xs text-[#5E5E5E] dark:text-[#A6A6A6] mb-4">
+            <p className="text-xs text-[#5E5E5E] dark:text-[#8A8A8A] mb-4">
               Honest data powers better support. Select the time you smoked:
             </p>
 
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-xs font-bold text-black dark:text-white block mb-1">
-                    Date
-                  </label>
-                  <input
-                    type="date"
-                    value={manualDate}
-                    onChange={(e) => setManualDate(e.target.value)}
-                    className="w-full h-12 px-3 rounded-2xl bg-[#F2F2F2] dark:bg-[#262626] border border-[#C4C4C4] dark:border-[#3D3D3D] text-black dark:text-white font-mono text-xs font-bold"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-black dark:text-white block mb-1">
-                    Time
-                  </label>
-                  <input
-                    type="time"
-                    value={manualTime}
-                    onChange={(e) => setManualTime(e.target.value)}
-                    className="w-full h-12 px-3 rounded-2xl bg-[#F2F2F2] dark:bg-[#262626] border border-[#C4C4C4] dark:border-[#3D3D3D] text-black dark:text-white font-mono text-xs font-bold"
-                  />
-                </div>
+              <div>
+                <label className="text-xs font-bold text-black dark:text-white block mb-1">
+                  Time
+                </label>
+                <input
+                  type="time"
+                  value={manualTime}
+                  onChange={(e) => setManualTime(e.target.value)}
+                  className="w-full h-12 px-3 rounded-2xl bg-[#F2F2F2] dark:bg-[#262626] border border-[#C4C4C4] dark:border-[#3D3D3D] text-black dark:text-white font-mono text-base font-bold"
+                />
               </div>
 
               <div>
@@ -182,7 +244,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
                         className={`text-xs px-3 py-1.5 rounded-full border transition ${
                           isSelected
                             ? 'bg-black text-white dark:bg-white dark:text-black border-transparent font-bold'
-                            : 'bg-transparent text-[#5E5E5E] dark:text-[#A6A6A6] border-[#C4C4C4] dark:border-[#3D3D3D]'
+                            : 'bg-transparent text-[#5E5E5E] dark:text-[#8A8A8A] border-[#C4C4C4] dark:border-[#3D3D3D]'
                         }`}
                       >
                         {trig.label}

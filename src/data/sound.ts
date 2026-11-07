@@ -2,8 +2,23 @@
 
 class FeedbackController {
   private audioCtx: AudioContext | null = null;
+  private muted: boolean = false;
+
+  setMuted(mute: boolean) {
+    this.muted = mute;
+  }
+
+  isMuted(): boolean {
+    return this.muted;
+  }
+
+  toggleMute(): boolean {
+    this.muted = !this.muted;
+    return this.muted;
+  }
 
   private getAudioContext(): AudioContext | null {
+    if (this.muted) return null;
     if (typeof window === 'undefined') return null;
     if (!this.audioCtx) {
       const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
@@ -19,6 +34,7 @@ class FeedbackController {
 
   // Soft tactile tick for one-tap log, chips, and buttons
   tick() {
+    if (this.muted) return;
     if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
       try {
         navigator.vibrate(12);
@@ -55,6 +71,7 @@ class FeedbackController {
 
   // Gentle celebration chime for craving beaten or milestone reach (under 1.2s)
   celebrate() {
+    if (this.muted) return;
     if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
       try {
         navigator.vibrate([30, 50, 40]);

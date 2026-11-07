@@ -104,8 +104,9 @@ export const SlipRecoverySheet: React.FC<SlipRecoverySheetProps> = ({
                 <p className="text-[10px] text-[#5E5E5E] dark:text-[#A6A6A6]">Days Clean</p>
               </div>
               <div>
-                <span className="text-lg font-bold tabular-nums">
-                  {plan.currency}{money}
+                <span className="text-lg font-bold tabular-nums flex items-baseline justify-center">
+                  <span className="font-sans font-bold text-sm mr-0.5 text-[#8A8A8A]">{plan.currency}</span>
+                  <span>{money.toLocaleString()}</span>
                 </span>
                 <p className="text-[10px] text-[#5E5E5E] dark:text-[#A6A6A6]">Money Kept</p>
               </div>

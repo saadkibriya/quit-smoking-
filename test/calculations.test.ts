@@ -9,6 +9,8 @@ import {
   calculatePeriodComparison,
   calculateRoundStatus,
   calculateCutDownLimitToday,
+  calculateAverageTimeBetweenCigarettes,
+  calculateTopTriggers,
   toLocalDateString,
   groupEntriesByDay,
 } from '../src/domain/calculations';
@@ -173,4 +175,25 @@ console.log('--- RUNNING UNLIT SECTION 4 CALCULATION UNIT TESTS ---');
   console.log('✓ Test 6: Cut-down mode schedule reduction targets passed.');
 }
 
+// Test 7: Patterns - Average time between cigarettes and First cigarette trend
+{
+  const baseTime = new Date('2026-11-10T08:00:00Z').getTime();
+  const testEntries: Entry[] = [
+    { id: 'c1', timestamp: baseTime, timezoneOffset: 0, type: 'CIGARETTE', triggers: ['waking_up', 'coffee_tea'] },
+    { id: 'c2', timestamp: baseTime + 2 * 3600 * 1000, timezoneOffset: 0, type: 'CIGARETTE', triggers: ['work_breaks'] }, // 2h interval
+    { id: 'c3', timestamp: baseTime + 5 * 3600 * 1000, timezoneOffset: 0, type: 'CIGARETTE', triggers: ['coffee_tea'] }, // 3h interval
+  ];
+
+  const spacing = calculateAverageTimeBetweenCigarettes(testEntries);
+  // Intervals: 120m, 180m -> Avg 150m = 2h 30m
+  assert.strictEqual(spacing.averageMinutes, 150);
+  assert.strictEqual(spacing.formatted, '2h 30m');
+
+  const top = calculateTopTriggers(testEntries);
+  assert.strictEqual(top[0].trigger, 'coffee_tea');
+  assert.strictEqual(top[0].count, 2);
+  console.log('✓ Test 7: Spacing intervals & top triggers aggregation passed.');
+}
+
 console.log('--- ALL UNIT TESTS COMPLETED SUCCESSFULLY! ---');
+

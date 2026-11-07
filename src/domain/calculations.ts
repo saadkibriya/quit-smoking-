@@ -88,10 +88,21 @@ export function calculateDependenceScore(usualPerDay: number, ttfc: string): {
   return { score, category, label, cpdPoints, ttfcPoints };
 }
 
+// Event filtering helpers (never count undone entries)
+export function isSmokeEvent(e: Entry): boolean {
+  if (e.undone) return false;
+  return e.type === 'CIGARETTE' || e.type === 'smoked';
+}
+
+export function isCravingResistedEvent(e: Entry): boolean {
+  if (e.undone) return false;
+  return e.type === 'CRAVING_BEATEN' || e.type === 'craving_resisted';
+}
+
 // Current streak in hours and breakdown
 export function calculateCurrentStreak(
-  entries: Entry[],
-  quitStartDate: string,
+  entries: Entry[] = [],
+  quitStartDate: string = new Date().toISOString(),
   nowTimestamp: number = Date.now()
 ): {
   streakHours: number;
@@ -102,9 +113,12 @@ export function calculateCurrentStreak(
   lastCigaretteTimestamp: number | null;
   effectiveStartTimestamp: number;
 } {
-  const quitStartMs = new Date(quitStartDate).getTime();
-  const cigaretteEntries = entries
-    .filter((e) => e.type === 'CIGARETTE' && e.timestamp <= nowTimestamp)
+  const parsedMs = new Date(quitStartDate).getTime();
+  const quitStartMs = isNaN(parsedMs) ? nowTimestamp : parsedMs;
+  const safeEntries = Array.isArray(entries) ? entries : [];
+
+  const cigaretteEntries = safeEntries
+    .filter((e) => isSmokeEvent(e) && typeof e.timestamp === 'number' && e.timestamp <= nowTimestamp)
     .sort((a, b) => b.timestamp - a.timestamp);
 
   const lastCigarette = cigaretteEntries.length > 0 ? cigaretteEntries[0].timestamp : null;
@@ -119,11 +133,11 @@ export function calculateCurrentStreak(
   const streakHours = diffMs / (1000 * 3600);
 
   return {
-    streakHours,
-    days,
-    hours,
-    minutes,
-    seconds,
+    streakHours: isNaN(streakHours) ? 0 : streakHours,
+    days: isNaN(days) ? 0 : days,
+    hours: isNaN(hours) ? 0 : hours,
+    minutes: isNaN(minutes) ? 0 : minutes,
+    seconds: isNaN(seconds) ? 0 : seconds,
     lastCigaretteTimestamp: lastCigarette,
     effectiveStartTimestamp: effectiveStart,
   };
@@ -152,10 +166,10 @@ export function groupEntriesByDay(
     }
     const day = map.get(dStr)!;
     day.entries.push(entry);
-    if (entry.type === 'CIGARETTE') {
+    if (isSmokeEvent(entry)) {
       day.cigarettesCount += 1;
       day.isSmokeFree = false;
-    } else if (entry.type === 'CRAVING_BEATEN') {
+    } else if (isCravingResistedEvent(entry)) {
       day.cravingsBeatenCount += 1;
     }
   }
@@ -231,7 +245,7 @@ export function calculateAvoidedCigarettes(
   const baselineExpected = elapsedDays * plan.usualPerDay;
 
   const smokedSinceQuit = entries
-    .filter((e) => e.type === 'CIGARETTE' && e.timestamp >= quitStartMs && e.timestamp <= nowTimestamp)
+    .filter((e) => isSmokeEvent(e) && e.timestamp >= quitStartMs && e.timestamp <= nowTimestamp)
     .length;
 
   return Math.max(0, Math.round((baselineExpected - smokedSinceQuit) * 10) / 10);
@@ -569,3 +583,226 @@ export function calculateCutDownLimitToday(
     percentReduced,
   };
 }
+
+// Average time between cigarettes (in hours and minutes)
+export function calculateAverageTimeBetweenCigarettes(entries: Entry[]): {
+  averageMinutes: number | null;
+  formatted: string;
+  totalIntervals: number;
+} {
+  const cigEntries = entries
+    .filter((e) => e.type === 'CIGARETTE')
+    .sort((a, b) => a.timestamp - b.timestamp);
+
+  if (cigEntries.length < 2) {
+    return { averageMinutes: null, formatted: 'Need more entries', totalIntervals: 0 };
+  }
+
+  // Calculate intervals between consecutive cigarettes on the same day (or within 16 waking hours)
+  const intervals: number[] = [];
+  for (let i = 1; i < cigEntries.length; i++) {
+    const prev = cigEntries[i - 1];
+    const curr = cigEntries[i];
+    const diffMinutes = Math.floor((curr.timestamp - prev.timestamp) / 60000);
+    // Only count daytime intervals under 12 hours (to exclude overnight sleep gaps)
+    if (diffMinutes > 0 && diffMinutes <= 720) {
+      intervals.push(diffMinutes);
+    }
+  }
+
+  if (intervals.length === 0) {
+    return { averageMinutes: null, formatted: 'Tracking spacing', totalIntervals: 0 };
+  }
+
+  const sum = intervals.reduce((acc, val) => acc + val, 0);
+  const avg = Math.round(sum / intervals.length);
+  const hours = Math.floor(avg / 60);
+  const minutes = avg % 60;
+
+  const formatted = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+  return { averageMinutes: avg, formatted, totalIntervals: intervals.length };
+}
+
+// First cigarette of the day trend (minutes after wake time)
+export function calculateFirstCigaretteOfDayTrend(
+  entries: Entry[],
+  wakeTimeStr: string = '07:00'
+): {
+  averageMinutesAfterWake: number | null;
+  formatted: string;
+  daysAnalyzed: number;
+} {
+  const cigEntries = entries.filter((e) => e.type === 'CIGARETTE');
+  if (cigEntries.length === 0) {
+    return { averageMinutesAfterWake: null, formatted: 'No logs yet', daysAnalyzed: 0 };
+  }
+
+  // Group by date to find earliest cigarette each day
+  const earliestByDay = new Map<string, number>();
+  for (const c of cigEntries) {
+    const dateStr = toLocalDateString(c.timestamp);
+    if (!earliestByDay.has(dateStr) || c.timestamp < earliestByDay.get(dateStr)!) {
+      earliestByDay.set(dateStr, c.timestamp);
+    }
+  }
+
+  const [wakeHour, wakeMin] = wakeTimeStr.split(':').map(Number);
+  const delays: number[] = [];
+
+  earliestByDay.forEach((ts, dateStr) => {
+    const d = new Date(ts);
+    const wakeDate = new Date(parseLocalDateString(dateStr));
+    wakeDate.setHours(wakeHour, wakeMin, 0, 0);
+
+    const diffMinutes = Math.round((ts - wakeDate.getTime()) / 60000);
+    // Only count plausible morning windows (-60m to 360m)
+    if (diffMinutes >= -60 && diffMinutes <= 360) {
+      delays.push(Math.max(0, diffMinutes));
+    }
+  });
+
+  if (delays.length === 0) {
+    return { averageMinutesAfterWake: null, formatted: 'Tracking morning rhythm', daysAnalyzed: 0 };
+  }
+
+  const avg = Math.round(delays.reduce((a, b) => a + b, 0) / delays.length);
+  const hours = Math.floor(avg / 60);
+  const minutes = avg % 60;
+  const formatted = hours > 0 ? `${hours}h ${minutes}m after wake` : `${minutes}m after wake`;
+
+  return { averageMinutesAfterWake: avg, formatted, daysAnalyzed: delays.length };
+}
+
+// Top triggers frequency breakdown
+export function calculateTopTriggers(entries: Entry[]): Array<{
+  trigger: string;
+  count: number;
+  percentage: number;
+}> {
+  const counts: Record<string, number> = {};
+  let totalWithTriggers = 0;
+
+  for (const e of entries) {
+    if (e.triggers && e.triggers.length > 0) {
+      for (const t of e.triggers) {
+        counts[t] = (counts[t] || 0) + 1;
+        totalWithTriggers += 1;
+      }
+    }
+  }
+
+  if (totalWithTriggers === 0) return [];
+
+  return Object.entries(counts)
+    .map(([trigger, count]) => ({
+      trigger,
+      count,
+      percentage: Math.round((count / totalWithTriggers) * 100),
+    }))
+    .sort((a, b) => b.count - a.count);
+}
+
+// Single Source of Truth Stats Helper (infos.md)
+export interface AppStats {
+  lastSmokeTime: number; // UTC ms
+  currentStreak: {
+    days: number;
+    hours: number;
+    minutes: number;
+    seconds: number;
+    totalHours: number;
+    totalMs: number;
+    formattedDays: string; // e.g. "12 DAYS"
+    formattedClock: string; // e.g. "04:37:12"
+  };
+  cigarettesNotSmoked: number;
+  moneySaved: number;
+  longestStreakDays: number;
+  longestStreakHours: number;
+  totalSmokeFreeDays: number;
+  cravingsResisted: number;
+  cravingsNotResisted: number;
+  todaySmokeCount: number;
+  isTodaySmokeFree: boolean;
+}
+
+export function calculateStats(
+  entries: Entry[] = [],
+  plan: UserPlan,
+  nowTimestamp: number = Date.now()
+): AppStats {
+  const safeEntries = Array.isArray(entries) ? entries : [];
+  const parsedMs = new Date(plan?.quitStartDate || Date.now()).getTime();
+  const quitStartMs = isNaN(parsedMs) ? nowTimestamp : parsedMs;
+
+  const smokeEvents = safeEntries
+    .filter((e) => isSmokeEvent(e) && typeof e.timestamp === 'number' && e.timestamp <= nowTimestamp)
+    .sort((a, b) => a.timestamp - b.timestamp);
+
+  const lastSmoke = smokeEvents.length > 0 ? smokeEvents[smokeEvents.length - 1].timestamp : quitStartMs;
+  const lastSmokeTime = Math.max(quitStartMs, lastSmoke);
+
+  // Current streak (0 if quit date is in the future)
+  const isFutureQuit = quitStartMs > nowTimestamp;
+  const streakDiffMs = isFutureQuit ? 0 : Math.max(0, nowTimestamp - lastSmokeTime);
+  const totalSeconds = Math.floor(streakDiffMs / 1000);
+  const streakDays = Math.floor(totalSeconds / 86400);
+  const streakHours = Math.floor((totalSeconds % 86400) / 3600);
+  const streakMinutes = Math.floor((totalSeconds % 3600) / 60);
+  const streakSeconds = totalSeconds % 60;
+  const totalStreakHours = streakDiffMs / (1000 * 3600);
+
+  // Time within day for chronometer: e.g. 04:37:12
+  const pad = (n: number) => String(isNaN(n) ? 0 : n).padStart(2, '0');
+  const formattedClock = `${pad(streakHours)}:${pad(streakMinutes)}:${pad(streakSeconds)}`;
+  const formattedDays = `${isNaN(streakDays) ? 0 : streakDays} DAYS`;
+
+  // Cigarettes not smoked & money saved
+  const avoided = isFutureQuit ? 0 : calculateAvoidedCigarettes(safeEntries, plan, nowTimestamp);
+  const cigarettesNotSmoked = Math.max(0, Math.floor(isNaN(avoided) ? 0 : avoided));
+  const moneySaved = Math.max(0, isFutureQuit ? 0 : calculateMoneyKept(avoided, plan));
+
+  // Smoke free days
+  const smokeFree = calculateSmokeFreeDays(entries, plan.quitStartDate, nowTimestamp);
+
+  // Cravings resisted
+  const cravingsResisted = entries.filter((e) => isCravingResistedEvent(e)).length;
+  const cravingsNotResisted = entries.filter((e) => !e.undone && e.type === 'craving_not_resisted').length;
+
+  // Longest streak calculation across all periods between quitStart, slips, and now
+  let maxStreakMs = streakDiffMs;
+  let prevTimestamp = quitStartMs;
+  for (const s of smokeEvents) {
+    if (s.timestamp > prevTimestamp) {
+      const interval = s.timestamp - prevTimestamp;
+      if (interval > maxStreakMs) maxStreakMs = interval;
+    }
+    prevTimestamp = s.timestamp;
+  }
+  const longestStreakHours = Math.max(totalStreakHours, maxStreakMs / (1000 * 3600));
+  const longestStreakDays = Math.floor(longestStreakHours / 24);
+
+  return {
+    lastSmokeTime,
+    currentStreak: {
+      days: streakDays,
+      hours: streakHours,
+      minutes: streakMinutes,
+      seconds: streakSeconds,
+      totalHours: totalStreakHours,
+      totalMs: streakDiffMs,
+      formattedDays,
+      formattedClock,
+    },
+    cigarettesNotSmoked,
+    moneySaved,
+    longestStreakDays,
+    longestStreakHours,
+    totalSmokeFreeDays: smokeFree.completedSmokeFreeDays,
+    cravingsResisted,
+    cravingsNotResisted,
+    todaySmokeCount: smokeFree.todayCigarettesCount,
+    isTodaySmokeFree: smokeFree.isTodaySoFarSmokeFree,
+  };
+}
+

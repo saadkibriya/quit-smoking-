@@ -90,6 +90,36 @@ export const ToolkitTab: React.FC<ToolkitTabProps> = ({
   // Erase data confirmation
   const [eraseStep, setEraseStep] = useState<0 | 1 | 2>(0);
 
+  // Edit date, time & currency inline
+  const [isEditingDateTime, setIsEditingDateTime] = useState(false);
+  const [editDate, setEditDate] = useState(() => {
+    const d = new Date(plan.quitStartDate);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return isNaN(d.getTime()) ? new Date().toISOString().split('T')[0] : `${y}-${m}-${day}`;
+  });
+  const [editTime, setEditTime] = useState(() => {
+    const d = new Date(plan.quitStartDate);
+    if (isNaN(d.getTime())) return '00:00';
+    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  });
+  const [editCurrency, setEditCurrency] = useState(plan.currency || '৳');
+  const [editPackPrice, setEditPackPrice] = useState(plan.packPrice || 10);
+  const [editSuccessMsg, setEditSuccessMsg] = useState(false);
+
+  // Custom milestone state
+  const [customTitle, setCustomTitle] = useState('');
+  const [customHours, setCustomHours] = useState('');
+  const [customWhy, setCustomWhy] = useState('');
+
+  // Price history state
+  const [newPrice, setNewPrice] = useState('');
+  const [newPriceDate, setNewPriceDate] = useState(toLocalDateString(Date.now()));
+
+  // Audio mute state
+  const [isSoundMuted, setIsSoundMuted] = useState(() => Sound.isMuted());
+
   const now = Date.now();
   const streak = calculateCurrentStreak(entries, plan.quitStartDate, now);
   const smokeFree = calculateSmokeFreeDays(entries, plan.quitStartDate, now);
@@ -294,22 +324,23 @@ export const ToolkitTab: React.FC<ToolkitTabProps> = ({
         </h3>
 
         <div className="rounded-3xl bg-[#F2F2F2] dark:bg-[#141414] border border-[#C4C4C4] dark:border-[#3D3D3D] overflow-hidden divide-y divide-[#C4C4C4] dark:divide-[#3D3D3D]">
-          {/* Craving SOS Trigger */}
+          {/* Craving Help Trigger */}
           <button
             onClick={() => {
               Sound.tick();
               onOpenSos();
             }}
+            aria-label="Open craving help"
             className="w-full p-4 flex items-center justify-between text-left hover:bg-[#E2E2E2] dark:hover:bg-[#262626] transition"
           >
             <div className="flex items-center gap-3">
               <ShieldAlert className="w-5 h-5 text-black dark:text-white" />
               <div>
                 <span className="text-xs font-bold text-black dark:text-white block">
-                  Craving SOS
+                  Craving help
                 </span>
                 <span className="text-[11px] text-[#5E5E5E] dark:text-[#A6A6A6]">
-                  Urge wave timer, paced breathing, and 6 coping tools
+                  3-minute paced breathing, distract tasks, and urge-riding tools
                 </span>
               </div>
             </div>
@@ -859,9 +890,9 @@ export const ToolkitTab: React.FC<ToolkitTabProps> = ({
               <span className="font-bold text-black dark:text-white">{plan.mode}</span>
             </div>
             <div>
-              <span className="text-[#5E5E5E] dark:text-[#A6A6A6] block">Quit Date:</span>
+              <span className="text-[#5E5E5E] dark:text-[#A6A6A6] block">Quit Date & Time:</span>
               <span className="font-bold text-black dark:text-white">
-                {new Date(plan.quitStartDate).toLocaleDateString()}
+                {new Date(plan.quitStartDate).toLocaleDateString()} at {new Date(plan.quitStartDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </span>
             </div>
             <div>
@@ -871,7 +902,7 @@ export const ToolkitTab: React.FC<ToolkitTabProps> = ({
             <div>
               <span className="text-[#5E5E5E] dark:text-[#A6A6A6] block">Pack price:</span>
               <span className="font-bold text-black dark:text-white">
-                {plan.currency}{plan.packPrice} ({plan.cigarettesPerPack}/pack)
+                <span className="font-sans font-bold mr-0.5">{plan.currency}</span>{plan.packPrice} ({plan.cigarettesPerPack}/pack)
               </span>
             </div>
             <div>
@@ -884,16 +915,165 @@ export const ToolkitTab: React.FC<ToolkitTabProps> = ({
             </div>
           </div>
 
-          <div className="pt-2">
-            <button
-              onClick={() => {
-                Sound.tick();
-                onRedoOnboarding();
-              }}
-              className="w-full h-11 rounded-full border border-[#C4C4C4] dark:border-[#3D3D3D] text-xs font-semibold text-black dark:text-white hover:bg-[#E2E2E2] dark:hover:bg-[#262626] transition active:scale-95"
-            >
-              Redo Onboarding Questionnaire
-            </button>
+          {/* Quick Edit Date, Time & Currency button */}
+          <div className="pt-2 border-t border-[#C4C4C4] dark:border-[#3D3D3D]">
+            {!isEditingDateTime ? (
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    Sound.tick();
+                    setIsEditingDateTime(true);
+                  }}
+                  className="flex-1 h-11 rounded-full bg-black dark:bg-white text-white dark:text-black font-semibold text-xs active:scale-95 transition"
+                >
+                  Adjust Quit Date, Time & Currency
+                </button>
+                <button
+                  onClick={() => {
+                    Sound.tick();
+                    onRedoOnboarding();
+                  }}
+                  className="px-4 h-11 rounded-full border border-[#C4C4C4] dark:border-[#3D3D3D] text-xs font-semibold text-black dark:text-white hover:bg-[#E2E2E2] dark:hover:bg-[#262626] transition active:scale-95"
+                >
+                  Redo Onboarding
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3 pt-2 animate-in fade-in">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-black dark:text-white">
+                    Set Exact Quit Date, Time & Currency
+                  </span>
+                  <button
+                    onClick={() => setIsEditingDateTime(false)}
+                    className="text-xs text-[#8A8A8A] hover:text-black dark:hover:text-white underline"
+                  >
+                    Cancel
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="text-[11px] font-bold text-[#8A8A8A] block mb-1">
+                      Quit Date
+                    </label>
+                    <input
+                      type="date"
+                      value={editDate}
+                      onChange={(e) => setEditDate(e.target.value)}
+                      className="w-full h-11 px-3 rounded-xl bg-white dark:bg-[#262626] border border-[#C4C4C4] dark:border-[#3D3D3D] text-xs font-mono font-bold"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-bold text-[#8A8A8A] block mb-1">
+                      Quit Time
+                    </label>
+                    <input
+                      type="time"
+                      value={editTime}
+                      onChange={(e) => setEditTime(e.target.value)}
+                      className="w-full h-11 px-3 rounded-xl bg-white dark:bg-[#262626] border border-[#C4C4C4] dark:border-[#3D3D3D] text-xs font-mono font-bold"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-bold text-[#8A8A8A] block mb-1">
+                    Currency Symbol
+                  </label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[
+                      { sym: '৳', label: 'BDT (৳)' },
+                      { sym: '$', label: 'USD ($)' },
+                      { sym: '€', label: 'EUR (€)' },
+                      { sym: '£', label: 'GBP (£)' },
+                      { sym: '₹', label: 'INR (₹)' },
+                      { sym: '¥', label: 'JPY (¥)' },
+                      { sym: 'C$', label: 'CAD (C$)' },
+                      { sym: 'A$', label: 'AUD (A$)' },
+                    ].map((c) => (
+                      <button
+                        key={c.sym}
+                        type="button"
+                        onClick={() => {
+                          Sound.tick();
+                          setEditCurrency(c.sym);
+                        }}
+                        className={`px-2.5 py-1 rounded-lg border text-xs font-bold transition ${
+                          editCurrency === c.sym
+                            ? 'bg-black text-white dark:bg-white dark:text-black border-transparent'
+                            : 'border-[#C4C4C4] dark:border-[#3D3D3D] text-[#8A8A8A]'
+                        }`}
+                      >
+                        {c.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-bold text-[#8A8A8A] block mb-1">
+                    Price per pack
+                  </label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    value={editPackPrice}
+                    onChange={(e) => setEditPackPrice(Number(e.target.value))}
+                    className="w-full h-11 px-3 rounded-xl bg-white dark:bg-[#262626] border border-[#C4C4C4] dark:border-[#3D3D3D] text-xs font-mono font-bold"
+                  />
+                </div>
+
+                <div className="pt-2 flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      Sound.tick();
+                      const now = new Date();
+                      const y = now.getFullYear();
+                      const m = String(now.getMonth() + 1).padStart(2, '0');
+                      const d = String(now.getDate()).padStart(2, '0');
+                      const hh = String(now.getHours()).padStart(2, '0');
+                      const mm = String(now.getMinutes()).padStart(2, '0');
+                      setEditDate(`${y}-${m}-${d}`);
+                      setEditTime(`${hh}:${mm}`);
+                    }}
+                    className="text-xs font-bold text-black dark:text-white underline underline-offset-2 hover:opacity-80"
+                  >
+                    Set to right now
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      Sound.tick();
+                      try {
+                        const [y, m, d] = editDate.split('-').map(Number);
+                        const [hh, mm] = editTime.split(':').map(Number);
+                        const newDateObj = new Date(y, (m || 1) - 1, d || 1, hh || 0, mm || 0, 0, 0);
+                        const updatedPlan: UserPlan = {
+                          ...plan,
+                          quitStartDate: isNaN(newDateObj.getTime()) ? new Date().toISOString() : newDateObj.toISOString(),
+                          currency: editCurrency,
+                          packPrice: editPackPrice,
+                        };
+                        onUpdatePlan(updatedPlan);
+                        setEditSuccessMsg(true);
+                        setTimeout(() => {
+                          setEditSuccessMsg(false);
+                          setIsEditingDateTime(false);
+                        }, 800);
+                      } catch {
+                        alert('Could not update date and time.');
+                      }
+                    }}
+                    className="h-10 px-5 rounded-full bg-black dark:bg-white text-white dark:text-black font-bold text-xs"
+                  >
+                    {editSuccessMsg ? '✓ Saved!' : 'Save changes'}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </section>
@@ -906,7 +1086,7 @@ export const ToolkitTab: React.FC<ToolkitTabProps> = ({
 
         <div className="p-5 rounded-3xl bg-[#F2F2F2] dark:bg-[#141414] border border-[#C4C4C4] dark:border-[#3D3D3D] space-y-2">
           <p className="text-xs text-[#5E5E5E] dark:text-[#A6A6A6]">
-            Unlit features 8+ standalone Glance widgets. Preview and test quick logging and timers in the interactive launcher sandbox:
+            Unlit features 9 Nothing OS Glance widgets (W1–W9) with Chronometer live tickers:
           </p>
           <button
             onClick={() => {
@@ -918,6 +1098,30 @@ export const ToolkitTab: React.FC<ToolkitTabProps> = ({
             <Sliders className="w-4 h-4" />
             <span>Open Home-Screen Widget Simulator</span>
           </button>
+
+          {/* Battery Optimization / Fix Card */}
+          <div className="mt-3 pt-3 border-t border-[#C4C4C4] dark:border-[#3D3D3D]">
+            <details className="group cursor-pointer">
+              <summary className="flex items-center justify-between text-xs font-bold text-black dark:text-white hover:underline">
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-[#D71921]" />
+                  <span>Widget not updating? Fix it here</span>
+                </span>
+                <ChevronDown className="w-4 h-4 text-[#8A8A8A] group-open:rotate-180 transition-transform" />
+              </summary>
+              <div className="mt-2.5 space-y-2 text-[11px] text-[#5E5E5E] dark:text-[#8A8A8A] bg-[#E2E2E2] dark:bg-[#1C1C1C] p-3 rounded-2xl">
+                <p className="font-semibold text-black dark:text-white">
+                  Aggressive manufacturer battery savers (Samsung One UI, Xiaomi HyperOS, OnePlus OxygenOS) can freeze widget updates:
+                </p>
+                <ol className="list-decimal pl-4 space-y-1">
+                  <li>Open Android <strong className="text-black dark:text-white">Settings → Apps → Unlit</strong>.</li>
+                  <li>Tap <strong className="text-black dark:text-white">Battery</strong> and select <strong className="text-black dark:text-white">Unrestricted</strong>.</li>
+                  <li>For Xiaomi/Redmi, enable <strong className="text-black dark:text-white">Autostart</strong> in app info.</li>
+                  <li>In Unlit, Chronometer ticks independently on your home screen without draining battery.</li>
+                </ol>
+              </div>
+            </details>
+          </div>
         </div>
       </section>
 
@@ -999,7 +1203,262 @@ export const ToolkitTab: React.FC<ToolkitTabProps> = ({
               </div>
             </div>
 
-            {/* AI Coach Privacy & Settings */}
+            {/* Week Starts Day (Monday / Sunday / Saturday) */}
+            <div className="pt-2 border-t border-[#C4C4C4] dark:border-[#3D3D3D]">
+              <span className="font-bold text-black dark:text-white block mb-1">
+                Week Starts On
+              </span>
+              <p className="text-[11px] text-[#5E5E5E] dark:text-[#A6A6A6] mb-2">
+                Sets the starting day for like-for-like weekly charts and comparisons.
+              </p>
+              <div className="flex gap-2">
+                {(['MONDAY', 'SUNDAY', 'SATURDAY'] as const).map((day) => {
+                  const isSelected = plan.weekStartDay === day;
+                  return (
+                    <button
+                      key={day}
+                      type="button"
+                      onClick={() => {
+                        Sound.tick();
+                        onUpdatePlan({ ...plan, weekStartDay: day });
+                      }}
+                      className={`flex-1 py-1.5 rounded-xl text-xs font-bold border transition ${
+                        isSelected
+                          ? 'bg-black text-white dark:bg-white dark:text-black border-black dark:border-white'
+                          : 'bg-[#F2F2F2] dark:bg-[#262626] border-[#C4C4C4] dark:border-[#3D3D3D] text-[#5E5E5E] dark:text-[#A6A6A6]'
+                      }`}
+                    >
+                      {day.charAt(0) + day.slice(1).toLowerCase()}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Custom Milestones Manager */}
+            <div className="pt-2 border-t border-[#C4C4C4] dark:border-[#3D3D3D]">
+              <span className="font-bold text-black dark:text-white block mb-1">
+                Custom Milestones
+              </span>
+              <p className="text-[11px] text-[#5E5E5E] dark:text-[#A6A6A6] mb-2">
+                Set personal goals beyond the standard Section 7 ladder.
+              </p>
+
+              {(plan.customMilestones || []).length > 0 && (
+                <div className="space-y-1.5 mb-2.5">
+                  {(plan.customMilestones || []).map((m) => (
+                    <div
+                      key={m.id}
+                      className="p-2.5 rounded-xl bg-[#F2F2F2] dark:bg-[#141414] border border-[#C4C4C4] dark:border-[#3D3D3D] flex items-center justify-between"
+                    >
+                      <div>
+                        <span className="font-bold text-black dark:text-white block">
+                          {m.title} ({m.hours} hours)
+                        </span>
+                        <span className="text-[10px] text-[#5E5E5E] dark:text-[#A6A6A6]">
+                          {m.whyItMatters}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => {
+                          Sound.tick();
+                          const updated = (plan.customMilestones || []).filter((item) => item.id !== m.id);
+                          onUpdatePlan({ ...plan, customMilestones: updated });
+                        }}
+                        className="text-red-500 hover:opacity-70 p-1"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="space-y-1.5 p-3 rounded-2xl bg-[#F2F2F2] dark:bg-[#141414] border border-[#C4C4C4] dark:border-[#3D3D3D]">
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Milestone Title (e.g. 100 Hours)"
+                    value={customTitle}
+                    onChange={(e) => setCustomTitle(e.target.value)}
+                    className="flex-1 h-9 px-2.5 rounded-xl bg-[#FFFFFF] dark:bg-[#262626] border border-[#C4C4C4] dark:border-[#3D3D3D] text-[11px]"
+                  />
+                  <input
+                    type="number"
+                    placeholder="Hours"
+                    value={customHours}
+                    onChange={(e) => setCustomHours(e.target.value)}
+                    className="w-20 h-9 px-2.5 rounded-xl bg-[#FFFFFF] dark:bg-[#262626] border border-[#C4C4C4] dark:border-[#3D3D3D] text-[11px]"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Why it matters to you"
+                    value={customWhy}
+                    onChange={(e) => setCustomWhy(e.target.value)}
+                    className="flex-1 h-9 px-2.5 rounded-xl bg-[#FFFFFF] dark:bg-[#262626] border border-[#C4C4C4] dark:border-[#3D3D3D] text-[11px]"
+                  />
+                  <button
+                    onClick={() => {
+                      if (!customTitle.trim() || !customHours) return;
+                      Sound.tick();
+                      const newM = {
+                        id: `custom_${Date.now()}`,
+                        title: customTitle.trim(),
+                        hours: Number(customHours),
+                        whyItMatters: customWhy.trim() || 'Personal milestone',
+                      };
+                      const updated = [...(plan.customMilestones || []), newM];
+                      onUpdatePlan({ ...plan, customMilestones: updated });
+                      setCustomTitle('');
+                      setCustomHours('');
+                      setCustomWhy('');
+                    }}
+                    className="px-3 h-9 rounded-xl bg-black dark:bg-white text-white dark:text-black font-bold text-xs"
+                  >
+                    Add
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Price History Manager */}
+            <div className="pt-2 border-t border-[#C4C4C4] dark:border-[#3D3D3D]">
+              <span className="font-bold text-black dark:text-white block mb-1">
+                Pack Price History
+              </span>
+              <p className="text-[11px] text-[#5E5E5E] dark:text-[#A6A6A6] mb-2">
+                A new price applies to savings calculations starting from its effective date.
+              </p>
+
+              <div className="space-y-1 mb-2">
+                {(plan.packPriceHistory || []).map((p, idx) => (
+                  <div
+                    key={idx}
+                    className="p-2 rounded-xl bg-[#F2F2F2] dark:bg-[#141414] border border-[#C4C4C4] dark:border-[#3D3D3D] flex items-center justify-between text-[11px]"
+                  >
+                    <span className="font-bold text-black dark:text-white">
+                      {plan.currency}{p.price} per pack
+                    </span>
+                    <span className="text-[#5E5E5E] dark:text-[#A6A6A6]">
+                      Effective: {p.effectiveFromDate}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  step="0.5"
+                  placeholder="New price"
+                  value={newPrice}
+                  onChange={(e) => setNewPrice(e.target.value)}
+                  className="w-24 h-9 px-2.5 rounded-xl bg-[#F2F2F2] dark:bg-[#262626] border border-[#C4C4C4] dark:border-[#3D3D3D] text-[11px]"
+                />
+                <input
+                  type="date"
+                  value={newPriceDate}
+                  onChange={(e) => setNewPriceDate(e.target.value)}
+                  className="flex-1 h-9 px-2.5 rounded-xl bg-[#F2F2F2] dark:bg-[#262626] border border-[#C4C4C4] dark:border-[#3D3D3D] text-[11px]"
+                />
+                <button
+                  onClick={() => {
+                    if (!newPrice || !newPriceDate) return;
+                    Sound.tick();
+                    const newEntry = {
+                      price: Number(newPrice),
+                      effectiveFromDate: newPriceDate,
+                    };
+                    const history = [...(plan.packPriceHistory || []), newEntry];
+                    onUpdatePlan({
+                      ...plan,
+                      packPrice: Number(newPrice),
+                      packPriceHistory: history,
+                    });
+                    setNewPrice('');
+                  }}
+                  className="px-3 h-9 rounded-xl bg-black dark:bg-white text-white dark:text-black font-bold text-xs"
+                >
+                  Save Price
+                </button>
+              </div>
+            </div>
+
+            {/* Tactile & Audio Feedback Toggle */}
+            <div className="pt-2 border-t border-[#C4C4C4] dark:border-[#3D3D3D] flex items-center justify-between">
+              <div>
+                <span className="font-bold text-black dark:text-white block">
+                  Tactile Audio & Haptics
+                </span>
+                <span className="text-[11px] text-[#5E5E5E] dark:text-[#A6A6A6]">
+                  Synthesized ticks for one-tap log and breathing prompts
+                </span>
+              </div>
+              <button
+                onClick={() => {
+                  const muted = Sound.toggleMute();
+                  setIsSoundMuted(muted);
+                }}
+                className={`w-12 h-6 rounded-full transition-colors relative ${
+                  !isSoundMuted ? 'bg-black dark:bg-white' : 'bg-[#C4C4C4] dark:bg-[#3D3D3D]'
+                }`}
+              >
+                <span
+                  className={`w-4 h-4 rounded-full bg-white dark:bg-black absolute top-1 transition-transform ${
+                    !isSoundMuted ? 'right-1' : 'left-1'
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* Notification Fine-Tuning */}
+            <div className="pt-2 border-t border-[#C4C4C4] dark:border-[#3D3D3D] space-y-2">
+              <span className="font-bold text-black dark:text-white block">
+                Notification Fine-Tuning
+              </span>
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] text-[#5E5E5E] dark:text-[#A6A6A6]">
+                  Quiet hours (Sleep: {plan.sleepTime} - Wake: {plan.wakeTime})
+                </span>
+                <button
+                  onClick={() => {
+                    Sound.tick();
+                    onUpdatePlan({ ...plan, quietHoursEnabled: !plan.quietHoursEnabled });
+                  }}
+                  className={`w-10 h-5 rounded-full transition-colors relative ${
+                    plan.quietHoursEnabled ? 'bg-black dark:bg-white' : 'bg-[#C4C4C4] dark:bg-[#3D3D3D]'
+                  }`}
+                >
+                  <span
+                    className={`w-3.5 h-3.5 rounded-full bg-white dark:bg-black absolute top-0.5 transition-transform ${
+                      plan.quietHoursEnabled ? 'right-0.5' : 'left-0.5'
+                    }`}
+                  />
+                </button>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] text-[#5E5E5E] dark:text-[#A6A6A6]">
+                  Risky-hour nudge (15m before peak craving window)
+                </span>
+                <button
+                  onClick={() => {
+                    Sound.tick();
+                    onUpdatePlan({ ...plan, riskyHourNudgeEnabled: !plan.riskyHourNudgeEnabled });
+                  }}
+                  className={`w-10 h-5 rounded-full transition-colors relative ${
+                    plan.riskyHourNudgeEnabled ? 'bg-black dark:bg-white' : 'bg-[#C4C4C4] dark:bg-[#3D3D3D]'
+                  }`}
+                >
+                  <span
+                    className={`w-3.5 h-3.5 rounded-full bg-white dark:bg-black absolute top-0.5 transition-transform ${
+                      plan.riskyHourNudgeEnabled ? 'right-0.5' : 'left-0.5'
+                    }`}
+                  />
+                </button>
+              </div>
+            </div>
             <div className="pt-2 border-t border-[#C4C4C4] dark:border-[#3D3D3D]">
               <div className="flex items-center justify-between">
                 <div>

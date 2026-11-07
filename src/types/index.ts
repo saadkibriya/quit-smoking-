@@ -1,6 +1,6 @@
 export type HabitMode = 'QUIT' | 'CUT_DOWN' | 'TRACK';
 
-export type EntryType = 'CIGARETTE' | 'CRAVING_BEATEN' | 'PLEDGE';
+export type EntryType = 'CIGARETTE' | 'CRAVING_BEATEN' | 'PLEDGE' | 'smoked' | 'craving_resisted' | 'craving_not_resisted';
 
 export type CoachStyle = 'GENTLE' | 'DIRECT' | 'SCIENCE';
 
@@ -13,6 +13,8 @@ export interface Entry {
   timestamp: number; // UTC ms
   timezoneOffset: number; // minutes
   type: EntryType;
+  source?: 'app' | 'widget';
+  undone?: boolean;
   triggers?: string[];
   mood?: number; // 1 to 5
   cravingStrength?: number; // 1 to 10
@@ -60,6 +62,33 @@ export interface WidgetLayoutItem {
   size: 'S' | 'W' | 'L'; // Small (1 col), Wide (2 cols), Large (2x2)
 }
 
+export type HomeCardId =
+  | 'TIMER'
+  | 'MONEY_SAVED'
+  | 'NOT_SMOKED'
+  | 'NEXT_MILESTONE'
+  | 'HEALTH_TIMELINE'
+  | 'CRAVINGS_RESISTED'
+  | 'LONGEST_STREAK'
+  | 'DOT_CALENDAR'
+  | 'DAILY_CHART'
+  | 'TRIGGERS_LOG'
+  | 'REASONS'
+  | 'SAVINGS_GOAL'
+  | 'ACHIEVEMENTS'
+  | 'LIFE_REGAINED'
+  | 'NORMAL_TODAY'
+  | 'TOUGHEST_HOURS'
+  | 'GROWTH_PLANT'
+  | 'DAILY_PLEDGE'
+  | 'COACH_TIP';
+
+export interface HomeLayoutItem {
+  cardId: HomeCardId;
+  visible: boolean;
+  size: 'S' | 'W' | 'L';
+}
+
 export interface IfThenPlan {
   id: string;
   trigger: string;
@@ -97,6 +126,12 @@ export interface UserPlan {
   maxNotificationsPerDay: number;
   customMilestones: CustomMilestone[];
   widgetLayout: WidgetLayoutItem[];
+  homeLayout?: HomeLayoutItem[];
+  layoutVersion?: number;
+  breathingPattern?: '4-in / 6-out' | '4-4-4-4 box' | '4-7-8';
+  confirmBeforeLog?: boolean;
+  haptics?: boolean;
+  savingsGoal?: { name: string; targetAmount: number };
   ifThenPlans: IfThenPlan[];
   geminiApiKey?: string;
 }

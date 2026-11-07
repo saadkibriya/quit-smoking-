@@ -4,6 +4,9 @@ import {
   calculatePeriodComparison,
   calculateToughestHours,
   calculateAverageCravingLength,
+  calculateAverageTimeBetweenCigarettes,
+  calculateFirstCigaretteOfDayTrend,
+  calculateTopTriggers,
   groupEntriesByDay,
   toLocalDateString,
   calculateSmokeFreeDays,
@@ -61,6 +64,9 @@ export const JourneyTab: React.FC<JourneyTabProps> = ({
   const comparison = calculatePeriodComparison(entries, period, plan, now, plan.weekStartDay);
   const toughestHours = calculateToughestHours(entries, 30);
   const avgCraving = calculateAverageCravingLength(entries);
+  const avgTimeBetween = calculateAverageTimeBetweenCigarettes(entries);
+  const firstCigTrend = calculateFirstCigaretteOfDayTrend(entries, plan.wakeTime);
+  const topTriggers = calculateTopTriggers(entries);
 
   // Group entries by day for month calendar and history
   const today = new Date(now);
@@ -149,7 +155,7 @@ export const JourneyTab: React.FC<JourneyTabProps> = ({
         })}
       </div>
 
-      {/* 2. Summary Row (User POV & Periodic comparisons) */}
+      {/* 2. Summary Row (Like-for-like comparisons) */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
         {/* Cigarettes smoked */}
         <div className="p-3.5 rounded-3xl bg-[#F2F2F2] dark:bg-[#141414] border border-[#C4C4C4] dark:border-[#3D3D3D]">
@@ -161,24 +167,22 @@ export const JourneyTab: React.FC<JourneyTabProps> = ({
           </span>
           <p className="text-[10px] font-medium text-[#5E5E5E] dark:text-[#A6A6A6] mt-0.5">
             {comparison.cigarettes.percentChange !== null
-              ? `${comparison.cigarettes.isImprovement ? 'â†“' : 'â†‘'} ${comparison.cigarettes.percentChange}% vs prev`
+              ? `${comparison.cigarettes.isImprovement ? '↓' : '↑'} ${comparison.cigarettes.percentChange}% vs prev`
               : 'New baseline'}
           </p>
         </div>
 
-        {/* Smoke-free days (User POV from Quit Date in All Time, or period count) */}
+        {/* Smoke-free days */}
         <div className="p-3.5 rounded-3xl bg-[#F2F2F2] dark:bg-[#141414] border border-[#C4C4C4] dark:border-[#3D3D3D]">
           <span className="text-[10px] font-bold uppercase tracking-wider text-[#5E5E5E] dark:text-[#A6A6A6] block">
             Smoke-Free
           </span>
           <span className="text-2xl font-extrabold text-black dark:text-white tabular-nums">
-            {period === 'ALL_TIME' ? smokeFree.completedSmokeFreeDays : comparison.smokeFreeDays.currentValue}d
+            {comparison.smokeFreeDays.currentValue}d
           </span>
           <p className="text-[10px] font-medium text-[#5E5E5E] dark:text-[#A6A6A6] mt-0.5">
-            {period === 'ALL_TIME'
-              ? `Since oath (${new Date(plan.quitStartDate).toLocaleDateString()})`
-              : comparison.smokeFreeDays.percentChange !== null
-              ? `${comparison.smokeFreeDays.isImprovement ? 'â†‘' : 'â†“'} ${comparison.smokeFreeDays.percentChange}% vs prev`
+            {comparison.smokeFreeDays.percentChange !== null
+              ? `${comparison.smokeFreeDays.isImprovement ? '↑' : '↓'} ${comparison.smokeFreeDays.percentChange}% vs prev`
               : 'New streak'}
           </p>
         </div>
@@ -189,32 +193,27 @@ export const JourneyTab: React.FC<JourneyTabProps> = ({
             Urges Beaten
           </span>
           <span className="text-2xl font-extrabold text-black dark:text-white tabular-nums">
-            {period === 'ALL_TIME'
-              ? entries.filter((e) => e.type === 'CRAVING_BEATEN').length
-              : comparison.cravingsBeaten.currentValue}
+            {comparison.cravingsBeaten.currentValue}
           </span>
           <p className="text-[10px] font-medium text-[#5E5E5E] dark:text-[#A6A6A6] mt-0.5">
-            {period === 'ALL_TIME'
-              ? 'Total cravings defeated'
-              : comparison.cravingsBeaten.percentChange !== null
-              ? `${comparison.cravingsBeaten.isImprovement ? 'â†‘' : 'â†“'} ${comparison.cravingsBeaten.percentChange}% vs prev`
+            {comparison.cravingsBeaten.percentChange !== null
+              ? `${comparison.cravingsBeaten.isImprovement ? '↑' : '↓'} ${comparison.cravingsBeaten.percentChange}% vs prev`
               : 'New record'}
           </p>
         </div>
 
-        {/* Money kept (User POV: total saved since quit date in All Time) */}
+        {/* Money kept */}
         <div className="p-3.5 rounded-3xl bg-[#F2F2F2] dark:bg-[#141414] border border-[#C4C4C4] dark:border-[#3D3D3D]">
           <span className="text-[10px] font-bold uppercase tracking-wider text-[#5E5E5E] dark:text-[#A6A6A6] block">
             Money Kept
           </span>
-          <span className="text-2xl font-extrabold text-black dark:text-white tabular-nums">
-            {plan.currency}{period === 'ALL_TIME' ? Math.round(calculateMoneyKept(calculateAvoidedCigarettes(entries, plan, now), plan)).toLocaleString() : comparison.moneyKept.currentValue}
+          <span className="text-2xl font-extrabold text-black dark:text-white tabular-nums flex items-baseline">
+            <span className="font-sans font-bold text-lg mr-0.5 text-[#8A8A8A]">{plan.currency}</span>
+            <span>{comparison.moneyKept.currentValue.toLocaleString()}</span>
           </span>
           <p className="text-[10px] font-medium text-[#5E5E5E] dark:text-[#A6A6A6] mt-0.5">
-            {period === 'ALL_TIME'
-              ? 'Saved since quit day'
-              : comparison.moneyKept.percentChange !== null
-              ? `${comparison.moneyKept.isImprovement ? 'â†‘' : 'â†“'} ${comparison.moneyKept.percentChange}% vs prev`
+            {comparison.moneyKept.percentChange !== null
+              ? `${comparison.moneyKept.isImprovement ? '↑' : '↓'} ${comparison.moneyKept.percentChange}% vs prev`
               : 'New savings'}
           </p>
         </div>
@@ -228,7 +227,7 @@ export const JourneyTab: React.FC<JourneyTabProps> = ({
               Cigarettes Per Day
             </h3>
             <p className="text-[11px] text-[#5E5E5E] dark:text-[#A6A6A6]">
-              Solid = Current period Â· Outlined = Previous period
+              Solid = Current period · Outlined = Previous period
             </p>
           </div>
           {inspectedDateStr && (
@@ -402,7 +401,7 @@ export const JourneyTab: React.FC<JourneyTabProps> = ({
                           : 'shape-diamond'
                       } ${isEarned ? 'bg-white text-black dark:bg-black dark:text-white' : 'bg-black text-white dark:bg-white dark:text-black'}`}
                     >
-                      âœ“
+                      ✓
                     </div>
                     <div>
                       <span className="text-xs font-bold block">{m.title}</span>
@@ -469,7 +468,7 @@ export const JourneyTab: React.FC<JourneyTabProps> = ({
                           : 'border-current'
                       }`}
                     >
-                      {isReached ? 'âœ“' : ''}
+                      {isReached ? '✓' : ''}
                     </span>
                     <span className="font-bold text-black dark:text-white">
                       {stage.timeLabel}
@@ -500,7 +499,7 @@ export const JourneyTab: React.FC<JourneyTabProps> = ({
         <div className="flex items-center justify-between mb-3">
           <div>
             <h3 className="text-sm font-bold text-black dark:text-white">
-              Toughest Hours (7-Day Ã— 24-Hour Grid)
+              Toughest Hours (7-Day × 24-Hour Grid)
             </h3>
             <p className="text-[11px] text-[#5E5E5E] dark:text-[#A6A6A6]">
               Darker squares represent peak craving windows over the past 30 days.
@@ -541,14 +540,61 @@ export const JourneyTab: React.FC<JourneyTabProps> = ({
           </div>
         </div>
 
-        {avgCraving.formattedMinutes && (
-          <div className="p-3 rounded-2xl bg-[#E2E2E2] dark:bg-[#262626] text-xs">
+        {/* Additional Patterns: Craving length, Spacing, First cigarette of day */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mt-3 text-xs">
+          {/* Average Craving Length */}
+          <div className="p-3 rounded-2xl bg-[#E2E2E2] dark:bg-[#262626]">
             <span className="font-bold text-black dark:text-white block">
-              Personal Craving Duration:
+              Craving Duration:
             </span>
             <span className="text-[#5E5E5E] dark:text-[#A6A6A6]">
-              Your cravings usually pass in {avgCraving.formattedMinutes} (median of {avgCraving.totalLoggedWithDuration} episodes).
+              {avgCraving.formattedMinutes
+                ? `Urges usually pass in ${avgCraving.formattedMinutes} (median of ${avgCraving.totalLoggedWithDuration} episodes)`
+                : 'Tracking urge duration over time'}
             </span>
+          </div>
+
+          {/* Average Time Between Cigarettes */}
+          <div className="p-3 rounded-2xl bg-[#E2E2E2] dark:bg-[#262626]">
+            <span className="font-bold text-black dark:text-white block">
+              Time Between Cigarettes:
+            </span>
+            <span className="text-[#5E5E5E] dark:text-[#A6A6A6]">
+              {avgTimeBetween.averageMinutes !== null
+                ? `Average ${avgTimeBetween.formatted} spacing between cigarettes`
+                : 'Calculates interval once multiple cigarettes are logged'}
+            </span>
+          </div>
+
+          {/* First Cigarette Trend */}
+          <div className="p-3 rounded-2xl bg-[#E2E2E2] dark:bg-[#262626] sm:col-span-2">
+            <span className="font-bold text-black dark:text-white block">
+              First Cigarette Trend:
+            </span>
+            <span className="text-[#5E5E5E] dark:text-[#A6A6A6]">
+              {firstCigTrend.averageMinutesAfterWake !== null
+                ? `Usually smoked ${firstCigTrend.formatted} (across ${firstCigTrend.daysAnalyzed} days)`
+                : 'Tracking morning time-to-first cigarette trend'}
+            </span>
+          </div>
+        </div>
+
+        {/* Top Triggers */}
+        {topTriggers.length > 0 && (
+          <div className="mt-3 pt-3 border-t border-[#C4C4C4] dark:border-[#3D3D3D]">
+            <span className="text-xs font-bold text-black dark:text-white block mb-1.5">
+              Top Triggers:
+            </span>
+            <div className="flex flex-wrap gap-1.5">
+              {topTriggers.slice(0, 6).map((t) => (
+                <span
+                  key={t.trigger}
+                  className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-[#E2E2E2] dark:bg-[#262626] border border-[#C4C4C4] dark:border-[#3D3D3D] text-black dark:text-white"
+                >
+                  {t.trigger.replace(/_/g, ' ')} · {t.percentage}%
+                </span>
+              ))}
+            </div>
           </div>
         )}
       </section>
@@ -561,7 +607,7 @@ export const JourneyTab: React.FC<JourneyTabProps> = ({
             <span>Activity History {inspectedDateStr ? `(${inspectedDateStr})` : ''}</span>
           </h3>
           <span className="text-xs font-semibold text-[#5E5E5E] dark:text-[#A6A6A6]">
-            {inspectedEntries.length} entries shown
+            {inspectedEntries.length} entries shown · Tap to edit
           </span>
         </div>
 
@@ -579,7 +625,8 @@ export const JourneyTab: React.FC<JourneyTabProps> = ({
               return (
                 <div
                   key={e.id}
-                  className="p-3 rounded-2xl bg-[#FFFFFF] dark:bg-[#000000] border border-[#C4C4C4] dark:border-[#3D3D3D] flex items-center justify-between text-xs"
+                  onClick={() => onEditEntry?.(e)}
+                  className="p-3 rounded-2xl bg-[#FFFFFF] dark:bg-[#000000] border border-[#C4C4C4] dark:border-[#3D3D3D] flex items-center justify-between text-xs cursor-pointer hover:border-black dark:hover:border-white transition"
                 >
                   <div className="flex items-center gap-2.5">
                     <span
@@ -591,7 +638,7 @@ export const JourneyTab: React.FC<JourneyTabProps> = ({
                           : 'bg-[#C4C4C4] dark:bg-[#3D3D3D]'
                       }`}
                     >
-                      {e.type === 'CIGARETTE' ? 'ðŸš¬' : e.type === 'CRAVING_BEATEN' ? 'âœ“' : 'â˜…'}
+                      {e.type === 'CIGARETTE' ? '🚬' : e.type === 'CRAVING_BEATEN' ? '✓' : '★'}
                     </span>
                     <div>
                       <span className="font-bold text-black dark:text-white block">
@@ -602,8 +649,8 @@ export const JourneyTab: React.FC<JourneyTabProps> = ({
                           : 'Daily Pledge'}
                       </span>
                       <span className="text-[11px] text-[#5E5E5E] dark:text-[#A6A6A6]">
-                        {dateLabel} Â· {timeStr}
-                        {e.triggers && e.triggers.length > 0 ? ` Â· ${e.triggers.join(', ')}` : ''}
+                        {dateLabel} · {timeStr}
+                        {e.triggers && e.triggers.length > 0 ? ` · ${e.triggers.join(', ')}` : ''}
                       </span>
                       {e.note && (
                         <p className="text-[10px] italic text-[#5E5E5E] dark:text-[#A6A6A6] mt-0.5">
@@ -613,7 +660,19 @@ export const JourneyTab: React.FC<JourneyTabProps> = ({
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1" onClick={(ev) => ev.stopPropagation()}>
+                    {onEditEntry && (
+                      <button
+                        onClick={() => {
+                          Sound.tick();
+                          onEditEntry(e);
+                        }}
+                        className="p-1.5 rounded-lg text-[#5E5E5E] dark:text-[#A6A6A6] hover:text-black dark:hover:text-white transition"
+                        title="Edit entry"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                     {onDeleteEntry && (
                       <button
                         onClick={() => {
@@ -655,7 +714,7 @@ export const JourneyTab: React.FC<JourneyTabProps> = ({
                 </span>
                 <span className="text-[11px] text-[#5E5E5E] dark:text-[#A6A6A6]">
                   Best streak: {Math.floor(att.bestStreakHours / 24)}d {Math.round(att.bestStreakHours % 24)}h
-                  {att.reasonForRestart ? ` Â· Lesson: ${att.reasonForRestart}` : ''}
+                  {att.reasonForRestart ? ` · Lesson: ${att.reasonForRestart}` : ''}
                 </span>
               </div>
               <span className="text-xs font-mono font-bold text-black dark:text-white">

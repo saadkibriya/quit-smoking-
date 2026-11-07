@@ -239,12 +239,12 @@ export const HeroCard: React.FC<HeroCardProps> = ({ plan, entries, onOpenMilesto
         </span>
       </div>
 
-      {/* Hero Timer */}
-      <div className="my-2">
-        <h2 className="text-4xl sm:text-5xl font-black tracking-tight text-black dark:text-white tabular-nums select-all">
+      {/* Hero Timer (64 to 88sp Expressive Scale) */}
+      <div className="my-3">
+        <h2 className="text-5xl sm:text-7xl font-black tracking-tight text-black dark:text-white tabular-nums select-all leading-none">
           {formatTimeParts()}
         </h2>
-        <p className="text-xs font-medium text-[#5E5E5E] dark:text-[#A6A6A6] mt-1">
+        <p className="text-xs font-semibold text-[#5E5E5E] dark:text-[#A6A6A6] mt-2">
           smoke-free streak
         </p>
       </div>

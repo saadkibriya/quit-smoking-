@@ -10,10 +10,13 @@ import {
   calculateRoundStatus,
   calculateToughestHours,
   calculateAverageCravingLength,
+  calculateCutDownLimitToday,
+  groupEntriesByDay,
   toLocalDateString,
 } from '../../domain/calculations';
 import { getNormalGuideForDay } from '../../content/withdrawalGuide';
 import { BODY_RECOVERY_TIMELINE } from '../../content/bodyRecovery';
+import { getToneMessage } from '../../domain/rulesEngine';
 import {
   Timer,
   Plus,
@@ -30,6 +33,9 @@ import {
   Activity,
   Award,
   Zap,
+  Target,
+  Clock,
+  Compass,
 } from 'lucide-react';
 import { Sound } from '../../data/sound';
 
@@ -71,6 +77,7 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
     'bg-[#F2F2F2] dark:bg-[#141414] border border-[#C4C4C4] dark:border-[#3D3D3D] rounded-3xl p-4 transition-colors flex flex-col justify-between overflow-hidden shadow-xs hover:border-black dark:hover:border-white';
 
   switch (type) {
+    // 1. Smoke-free timer (S, W, L)
     case 'TIMER':
       return (
         <div
@@ -85,7 +92,7 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
             <span>{round.currentRoundName}</span>
           </div>
           <div className="my-1">
-            <span className="text-2xl sm:text-3xl font-extrabold text-black dark:text-white tabular-nums tracking-tight">
+            <span className="text-2xl sm:text-3xl font-black text-black dark:text-white tabular-nums tracking-tight">
               {streak.days}d {streak.hours}h {streak.minutes}m
             </span>
             <p className="text-[11px] text-[#5E5E5E] dark:text-[#A6A6A6]">
@@ -95,6 +102,7 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
         </div>
       );
 
+    // 2. Quick log (S, W)
     case 'QUICK_LOG':
       return (
         <div className={`${containerBase} min-h-[120px]`}>
@@ -118,6 +126,7 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
         </div>
       );
 
+    // 3. Craving SOS (S)
     case 'SOS':
       return (
         <div className={`${containerBase} min-h-[120px]`}>
@@ -137,6 +146,56 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
         </div>
       );
 
+    // 4. Today vs limit (S, W)
+    case 'TODAY_VS_LIMIT': {
+      const todayStr = toLocalDateString(now);
+      const todayCount = smokeFree.todayCigarettesCount;
+      const targetLimit =
+        plan.mode === 'CUT_DOWN'
+          ? calculateCutDownLimitToday(
+              plan.cutDownSchedule || {
+                startDate: toLocalDateString(now),
+                planWeeks: 2,
+                initialUsual: plan.usualPerDay,
+              },
+              now
+            ).limitToday
+          : plan.usualPerDay;
+
+      const lastCig = entries
+        .filter((e) => e.type === 'CIGARETTE')
+        .sort((a, b) => b.timestamp - a.timestamp)[0];
+      const minutesSinceLast = lastCig ? Math.floor((now - lastCig.timestamp) / 60000) : null;
+
+      return (
+        <div onClick={onOpenJourney} className={`${containerBase} cursor-pointer min-h-[120px]`}>
+          <div className="flex items-center justify-between text-[#5E5E5E] dark:text-[#A6A6A6] text-xs font-bold uppercase tracking-wider">
+            <span className="flex items-center gap-1">
+              <Target className="w-3.5 h-3.5" />
+              Today vs Limit
+            </span>
+            <span>{plan.mode === 'CUT_DOWN' ? 'Cut-Down' : 'Baseline'}</span>
+          </div>
+          <div className="my-1">
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-3xl font-extrabold text-black dark:text-white tabular-nums tracking-tight">
+                {todayCount}
+              </span>
+              <span className="text-sm font-bold text-[#5E5E5E] dark:text-[#A6A6A6]">
+                / {targetLimit} max
+              </span>
+            </div>
+            <p className="text-[11px] text-[#5E5E5E] dark:text-[#A6A6A6] mt-0.5">
+              {minutesSinceLast !== null
+                ? `Last one ${Math.floor(minutesSinceLast / 60)}h ${minutesSinceLast % 60}m ago`
+                : 'None yet today'}
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    // 5. Money kept (S, W)
     case 'MONEY_KEPT':
       return (
         <div
@@ -150,8 +209,9 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
             </span>
           </div>
           <div>
-            <span className="text-3xl font-extrabold text-black dark:text-white tabular-nums tracking-tight">
-              {plan.currency}{money}
+            <span className="text-3xl font-extrabold text-black dark:text-white tabular-nums tracking-tight flex items-baseline">
+              <span className="font-sans font-bold text-xl mr-1 text-[#8A8A8A]">{plan.currency}</span>
+              <span>{money.toLocaleString()}</span>
             </span>
             <p className="text-[11px] text-[#5E5E5E] dark:text-[#A6A6A6]">
               never lost to cigarettes
@@ -160,6 +220,7 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
         </div>
       );
 
+    // 6. Cigarettes avoided (S)
     case 'CIGS_AVOIDED':
       return (
         <div
@@ -183,6 +244,7 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
         </div>
       );
 
+    // 7. Life regained (S, W)
     case 'LIFE_REGAINED':
       return (
         <div
@@ -207,7 +269,37 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
         </div>
       );
 
-    case 'ROUND_PROGRESS':
+    // 8. Next milestone (W, L)
+    case 'NEXT_MILESTONE': {
+      const hoursLeft = Math.max(0, round.hoursUntilNextMilestone);
+      const hoursNum = Math.floor(hoursLeft);
+      const minsNum = Math.round((hoursLeft % 1) * 60);
+
+      return (
+        <div onClick={onOpenJourney} className={`${containerBase} cursor-pointer min-h-[120px]`}>
+          <div className="flex items-center justify-between text-[#5E5E5E] dark:text-[#A6A6A6] text-xs font-bold uppercase tracking-wider">
+            <span className="flex items-center gap-1.5">
+              <Milestone className="w-3.5 h-3.5" />
+              Next Milestone: {round.nextMilestoneTitle}
+            </span>
+            <span className="font-mono text-black dark:text-white">
+              {hoursLeft > 0 ? `in ${hoursNum}h ${minsNum}m` : 'Reached!'}
+            </span>
+          </div>
+          <div className="my-1">
+            <p className="text-sm font-bold text-black dark:text-white">
+              {round.nextMilestoneWhy}
+            </p>
+            <p className="text-[11px] text-[#5E5E5E] dark:text-[#A6A6A6] mt-0.5">
+              Tap to see full sprint milestone ladder
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    // 9. Round progress (W, L)
+    case 'ROUND_PROGRESS': {
       const roundSquares = 28;
       const currentRoundDay = Math.min(roundSquares, smokeFree.completedSmokeFreeDays + 1);
 
@@ -250,14 +342,15 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
           </p>
         </div>
       );
+    }
 
-    case 'WEEK_COMPARISON':
-      const weekComp = calculatePeriodComparison(entries, 'WEEK', plan);
+    // 10. Week vs last week (W, L)
+    case 'WEEK_COMPARISON': {
+      const weekComp = calculatePeriodComparison(entries, 'WEEK', plan, now, plan.weekStartDay);
       return (
         <div
           onClick={onOpenJourney}
-          className={`${containerBase} cursor-pointer min-h-[120px]`}
-        >
+          className={`${containerBase} cursor-pointer min-h-[120px]`}>
           <div className="flex items-center justify-between text-[#5E5E5E] dark:text-[#A6A6A6] text-xs font-bold uppercase tracking-wider">
             <span className="flex items-center gap-1.5">
               <BarChart2 className="w-3.5 h-3.5" />
@@ -283,13 +376,53 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
                 {weekComp.smokeFreeDays.currentValue} smoke-free
               </span>
               <p className="text-[11px] text-[#5E5E5E] dark:text-[#A6A6A6]">
-                +{weekComp.moneyKept.currentValue} saved
+                +{plan.currency}{weekComp.moneyKept.currentValue} saved
               </p>
             </div>
           </div>
         </div>
       );
+    }
 
+    // 11. Month vs last month (W, L)
+    case 'MONTH_COMPARISON': {
+      const monthComp = calculatePeriodComparison(entries, 'MONTH', plan, now, plan.weekStartDay);
+      return (
+        <div onClick={onOpenJourney} className={`${containerBase} cursor-pointer min-h-[120px]`}>
+          <div className="flex items-center justify-between text-[#5E5E5E] dark:text-[#A6A6A6] text-xs font-bold uppercase tracking-wider">
+            <span className="flex items-center gap-1.5">
+              <BarChart2 className="w-3.5 h-3.5" />
+              Month vs Same Days Last Month
+            </span>
+            <span className="font-semibold text-black dark:text-white">
+              {monthComp.cigarettes.percentChange !== null
+                ? `${monthComp.cigarettes.isImprovement ? '↓' : '↑'} ${monthComp.cigarettes.percentChange}%`
+                : 'New'}
+            </span>
+          </div>
+          <div className="flex items-baseline justify-between mt-2">
+            <div>
+              <span className="text-2xl font-extrabold text-black dark:text-white tabular-nums">
+                {monthComp.cigarettes.currentValue} smoked
+              </span>
+              <p className="text-[11px] text-[#5E5E5E] dark:text-[#A6A6A6]">
+                vs {monthComp.cigarettes.previousValue} last month
+              </p>
+            </div>
+            <div className="text-right">
+              <span className="text-sm font-bold text-black dark:text-white">
+                {monthComp.smokeFreeDays.currentValue} smoke-free
+              </span>
+              <p className="text-[11px] text-[#5E5E5E] dark:text-[#A6A6A6]">
+                +{plan.currency}{monthComp.moneyKept.currentValue} saved
+              </p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // 12. Cravings beaten (S, W)
     case 'CRAVINGS_BEATEN':
       return (
         <div
@@ -313,6 +446,7 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
         </div>
       );
 
+    // 13. What's normal today (W, L)
     case 'WHAT_IS_NORMAL':
       return (
         <div
@@ -334,7 +468,43 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
         </div>
       );
 
-    case 'MY_WHY':
+    // 14. Body recovery (W, L)
+    case 'BODY_RECOVERY': {
+      const reachedStages = BODY_RECOVERY_TIMELINE.filter((s) => streak.streakHours >= s.hours);
+      const latestReached = reachedStages[reachedStages.length - 1];
+      const nextStage = BODY_RECOVERY_TIMELINE.find((s) => streak.streakHours < s.hours);
+
+      return (
+        <div onClick={onOpenJourney} className={`${containerBase} cursor-pointer min-h-[120px]`}>
+          <div className="flex items-center justify-between text-[#5E5E5E] dark:text-[#A6A6A6] text-xs font-bold uppercase tracking-wider">
+            <span className="flex items-center gap-1.5">
+              <HeartPulse className="w-3.5 h-3.5" />
+              Body Recovery
+            </span>
+            <span>WHO Verified</span>
+          </div>
+          <div className="my-1">
+            {latestReached ? (
+              <p className="text-xs font-bold text-black dark:text-white">
+                ✓ Reached: {latestReached.timeLabel} ({latestReached.whatHappens})
+              </p>
+            ) : (
+              <p className="text-xs font-bold text-black dark:text-white">
+                Recovery underway from first 20 minutes
+              </p>
+            )}
+            {nextStage && (
+              <p className="text-[11px] text-[#5E5E5E] dark:text-[#A6A6A6] mt-0.5">
+                Next at {nextStage.timeLabel}: {nextStage.whatHappens}
+              </p>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // 15. My why (W, L)
+    case 'MY_WHY': {
       const topReason = plan.reasons[0] || 'My Health and Freedom';
       return (
         <div
@@ -355,8 +525,37 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
           </div>
         </div>
       );
+    }
 
-    case 'DAILY_PLEDGE':
+    // 16. Toughest hour today (W)
+    case 'TOUGHEST_HOUR': {
+      const toughest = calculateToughestHours(entries, 30);
+      const topPeak = toughest.peakHour;
+      const peakHourStr = topPeak !== undefined ? `${topPeak % 12 || 12} ${topPeak >= 12 ? 'PM' : 'AM'}` : '9 PM';
+
+      return (
+        <div onClick={onOpenToolkit} className={`${containerBase} cursor-pointer min-h-[120px]`}>
+          <div className="flex items-center justify-between text-[#5E5E5E] dark:text-[#A6A6A6] text-xs font-bold uppercase tracking-wider">
+            <span className="flex items-center gap-1.5">
+              <Clock className="w-3.5 h-3.5" />
+              Toughest Hour Today
+            </span>
+            <span>Risky Window</span>
+          </div>
+          <div className="my-1">
+            <p className="text-sm font-extrabold text-black dark:text-white">
+              Your toughest time is around {peakHourStr}.
+            </p>
+            <p className="text-[11px] text-[#5E5E5E] dark:text-[#A6A6A6] mt-0.5">
+              Plan ready? Tap to review your if-then routine swaps.
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    // 17. Daily pledge (S, W)
+    case 'DAILY_PLEDGE': {
       const todayStr = toLocalDateString(now);
       const hasPledgedToday = entries.some(
         (e) => e.type === 'PLEDGE' && toLocalDateString(e.timestamp) === todayStr
@@ -390,9 +589,33 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
           )}
         </div>
       );
+    }
 
-    case 'GROWTH':
-      // Plant made of blocks: 1 block per smoke-free day. Never removed!
+    // 18. Coach tip (W, L)
+    case 'COACH_TIP': {
+      const tip = getToneMessage('DAY_4', plan.coachStyle);
+      return (
+        <div onClick={onOpenToolkit} className={`${containerBase} cursor-pointer min-h-[120px]`}>
+          <div className="flex items-center justify-between text-[#5E5E5E] dark:text-[#A6A6A6] text-xs font-bold uppercase tracking-wider">
+            <span className="flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5" />
+              Coach Tip ({plan.coachStyle})
+            </span>
+          </div>
+          <div className="my-1">
+            <p className="text-xs font-semibold text-black dark:text-white leading-relaxed line-clamp-2">
+              "{tip}"
+            </p>
+            <p className="text-[11px] text-[#5E5E5E] dark:text-[#A6A6A6] mt-1">
+              Tap to chat with your coach or get weekly review
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    // 19. Growth plant blocks (L)
+    case 'GROWTH': {
       const totalBlocks = Math.max(1, smokeFree.completedSmokeFreeDays);
       return (
         <div
@@ -420,6 +643,48 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
           </p>
         </div>
       );
+    }
+
+    // 20. Streak calendar month overview (L)
+    case 'STREAK_CALENDAR': {
+      const todayDate = new Date(now);
+      const startOfMonth = new Date(todayDate.getFullYear(), todayDate.getMonth(), 1);
+      const endOfMonth = new Date(todayDate.getFullYear(), todayDate.getMonth() + 1, 0);
+      const monthMap = groupEntriesByDay(
+        entries,
+        toLocalDateString(startOfMonth.getTime()),
+        toLocalDateString(endOfMonth.getTime())
+      );
+      const days = Array.from(monthMap.values());
+
+      return (
+        <div onClick={onOpenJourney} className={`${containerBase} cursor-pointer min-h-[140px]`}>
+          <div className="flex items-center justify-between text-[#5E5E5E] dark:text-[#A6A6A6] text-xs font-bold uppercase tracking-wider mb-1">
+            <span className="flex items-center gap-1.5">
+              <CalendarDays className="w-3.5 h-3.5" />
+              Streak Calendar
+            </span>
+            <span>{todayDate.toLocaleDateString(undefined, { month: 'short' })}</span>
+          </div>
+          <div className="grid grid-cols-7 gap-1 my-1">
+            {days.slice(0, 28).map((d) => (
+              <div
+                key={d.dateStr}
+                title={`${d.dateStr}: ${d.cigarettesCount} cigs`}
+                className={`h-3 rounded-xs transition-colors ${
+                  d.isSmokeFree
+                    ? 'bg-black dark:bg-white'
+                    : 'border border-black dark:border-white bg-transparent'
+                }`}
+              />
+            ))}
+          </div>
+          <p className="text-[10px] text-[#5E5E5E] dark:text-[#A6A6A6] mt-1">
+            Solid = smoke-free · Outlined = smoked
+          </p>
+        </div>
+      );
+    }
 
     default:
       return (

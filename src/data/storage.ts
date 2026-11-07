@@ -1,4 +1,4 @@
-import { Entry, UserPlan, QuitAttempt, EarnedBadge, ToolStat, ChatMessage, OtherHabit } from '../types';
+import { Entry, UserPlan, QuitAttempt, EarnedBadge, ToolStat, ChatMessage, OtherHabit, HomeLayoutItem, HomeCardId } from '../types';
 import { generateDemoData } from '../domain/demoData';
 
 const STORAGE_KEYS = {
@@ -11,6 +11,45 @@ const STORAGE_KEYS = {
   OTHER_HABITS: 'unlit_other_habits_v1',
 };
 
+// Section 1 & 2 default home layout (Progressive disclosure: 4 cards only)
+export const DEFAULT_HOME_LAYOUT: HomeLayoutItem[] = [
+  { cardId: 'TIMER', visible: true, size: 'W' },
+  { cardId: 'MONEY_SAVED', visible: true, size: 'S' },
+  { cardId: 'NOT_SMOKED', visible: true, size: 'S' },
+  { cardId: 'NEXT_MILESTONE', visible: true, size: 'W' },
+];
+
+export interface CardMeta {
+  id: HomeCardId;
+  label: string;
+  description: string;
+  defaultSize: 'S' | 'W' | 'L';
+  isPermanent?: boolean;
+}
+
+export const ALL_HOME_CARDS: CardMeta[] = [
+  { id: 'TIMER', label: 'Smoke-free timer', description: 'Live-ticking smoke-free days and hours timer', defaultSize: 'W', isPermanent: true },
+  { id: 'MONEY_SAVED', label: 'Money saved', description: 'Real-time calculation of money saved since quitting', defaultSize: 'S' },
+  { id: 'NOT_SMOKED', label: 'Cigarettes not smoked', description: 'Total count of avoided cigarettes based on usual intake', defaultSize: 'S' },
+  { id: 'NEXT_MILESTONE', label: 'Next health milestone', description: 'WHO/NHS certified milestone with dot progress bar', defaultSize: 'W' },
+  { id: 'HEALTH_TIMELINE', label: 'Full health timeline', description: 'Upcoming bodily recovery stages and clinical sources', defaultSize: 'W' },
+  { id: 'CRAVINGS_RESISTED', label: 'Cravings resisted', description: 'Total urge waves you successfully rode out', defaultSize: 'S' },
+  { id: 'LONGEST_STREAK', label: 'Longest streak & total days', description: 'Personal record streak and total smoke-free days', defaultSize: 'W' },
+  { id: 'DOT_CALENDAR', label: 'Dot calendar (last 4 weeks)', description: '28-dot matrix showing smoke-free and slip days', defaultSize: 'W' },
+  { id: 'DAILY_CHART', label: 'Daily smoked / craving chart', description: 'Visual trend of daily cigarette count and cravings', defaultSize: 'W' },
+  { id: 'TRIGGERS_LOG', label: 'Triggers & craving log', description: 'Top situational triggers and craving patterns', defaultSize: 'W' },
+  { id: 'REASONS', label: 'My reasons to quit', description: 'Your personal motivation anchors and photos', defaultSize: 'W' },
+  { id: 'SAVINGS_GOAL', label: 'Savings goal', description: 'Track progress toward a tangible purchase reward', defaultSize: 'W' },
+  { id: 'ACHIEVEMENTS', label: 'Achievements', description: 'Earned milestones and clinical achievement badges', defaultSize: 'W' },
+  { id: 'LIFE_REGAINED', label: 'Time of life regained', description: 'Estimated life hours gained back (~20 min/cigarette)', defaultSize: 'W' },
+  { id: 'NORMAL_TODAY', label: "What's normal today", description: 'Evidence-based symptoms and sensations expected today', defaultSize: 'W' },
+  { id: 'TOUGHEST_HOURS', label: 'Toughest hours', description: 'Peak craving hours of day based on your logging history', defaultSize: 'W' },
+  { id: 'GROWTH_PLANT', label: 'Growth visualization', description: 'Digital plant/blocks flourishing with your clean streak', defaultSize: 'L' },
+  { id: 'DAILY_PLEDGE', label: 'Daily pledge card', description: 'Morning commitment: "Today I will not smoke"', defaultSize: 'S' },
+  { id: 'COACH_TIP', label: 'Coach tip of the day', description: 'Evidence-based behavioral nudge from cessation science', defaultSize: 'W' },
+];
+
+
 export const DEFAULT_PLAN: UserPlan = {
   mode: 'QUIT',
   quitStartDate: new Date().toISOString(),
@@ -18,7 +57,7 @@ export const DEFAULT_PLAN: UserPlan = {
   cigarettesPerPack: 20,
   packPrice: 10,
   packPriceHistory: [{ price: 10, effectiveFromDate: '2026-01-01' }],
-  currency: '$',
+  currency: '৳',
   weekStartDay: 'MONDAY',
   wakeTime: '07:00',
   sleepTime: '23:00',
@@ -41,12 +80,18 @@ export const DEFAULT_PLAN: UserPlan = {
     phone: '',
   },
   onboardingCompleted: false,
-  themePreference: 'DAY',
+  themePreference: 'NIGHT',
   aiCoachEnabled: true,
   quietHoursEnabled: true,
   riskyHourNudgeEnabled: true,
   maxNotificationsPerDay: 2,
   customMilestones: [],
+  homeLayout: DEFAULT_HOME_LAYOUT,
+  layoutVersion: 1,
+  breathingPattern: '4-in / 6-out',
+  confirmBeforeLog: false,
+  haptics: true,
+  savingsGoal: { name: 'Reward goal', targetAmount: 100 },
   widgetLayout: [
     { id: 'w_timer', type: 'TIMER', size: 'W' },
     { id: 'w_quick_log', type: 'QUICK_LOG', size: 'S' },
@@ -121,11 +166,21 @@ export const Storage = {
     this.saveEntries(entries);
   },
 
+  markEntryUndone(id: string) {
+    const entries = this.getEntries().map((e) => (e.id === id ? { ...e, undone: true } : e));
+    this.saveEntries(entries);
+  },
+
   getPlan(): UserPlan {
     try {
       const raw = localStorage.getItem(STORAGE_KEYS.PLAN);
       if (!raw) return DEFAULT_PLAN;
-      return { ...DEFAULT_PLAN, ...JSON.parse(raw) };
+      const parsed = JSON.parse(raw);
+      return {
+        ...DEFAULT_PLAN,
+        ...parsed,
+        homeLayout: parsed.homeLayout && parsed.homeLayout.length > 0 ? parsed.homeLayout : DEFAULT_HOME_LAYOUT,
+      };
     } catch {
       return DEFAULT_PLAN;
     }
