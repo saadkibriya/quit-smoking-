@@ -7,7 +7,6 @@ PKG_DIR="$MAIN/java/$(echo "$APP_ID" | tr . /)"
 
 mkdir -p "$PKG_DIR" "$MAIN/res/layout" "$MAIN/res/xml" "$MAIN/res/drawable" "$MAIN/res/values"
 
-# ---------- Java: widget provider ----------
 cat > "$PKG_DIR/QuitWidgetProvider.java" <<'EOF'
 package __APP_ID__;
 
@@ -78,7 +77,6 @@ public class QuitWidgetProvider extends AppWidgetProvider {
 EOF
 sed -i "s/__APP_ID__/$APP_ID/g" "$PKG_DIR/QuitWidgetProvider.java"
 
-# ---------- Layout ----------
 cat > "$MAIN/res/layout/widget_quit.xml" <<'EOF'
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
@@ -175,7 +173,6 @@ cat > "$MAIN/res/layout/widget_quit.xml" <<'EOF'
 </LinearLayout>
 EOF
 
-# ---------- Background ----------
 cat > "$MAIN/res/drawable/widget_bg.xml" <<'EOF'
 <?xml version="1.0" encoding="utf-8"?>
 <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
@@ -185,7 +182,6 @@ cat > "$MAIN/res/drawable/widget_bg.xml" <<'EOF'
 </shape>
 EOF
 
-# ---------- Widget metadata ----------
 cat > "$MAIN/res/xml/quit_widget_info.xml" <<'EOF'
 <?xml version="1.0" encoding="utf-8"?>
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
@@ -208,7 +204,6 @@ cat > "$MAIN/res/values/widget_strings.xml" <<'EOF'
 </resources>
 EOF
 
-# ---------- Register receiver in manifest ----------
 MANIFEST="$MAIN/AndroidManifest.xml"
 if ! grep -q "QuitWidgetProvider" "$MANIFEST"; then
   sed -i 's#</application>#    <receiver android:name=".QuitWidgetProvider" android:exported="true">\n            <intent-filter>\n                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />\n            </intent-filter>\n            <meta-data android:name="android.appwidget.provider" android:resource="@xml/quit_widget_info" />\n        </receiver>\n    </application>#' "$MANIFEST"
