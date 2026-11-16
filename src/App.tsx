@@ -9,6 +9,8 @@ import { DefaultHomeCards } from './components/today/DefaultHomeCards';
 import { QuickActions } from './components/today/QuickActions';
 import { CustomizeHomeDrawer } from './components/today/CustomizeHomeDrawer';
 import { JourneyTab } from './components/journey/JourneyTab';
+import { PaceTab } from './components/pace/PaceTab';
+import { SmokeLogSheet } from './components/log/SmokeLogSheet';
 import { ToolkitTab } from './components/toolkit/ToolkitTab';
 import { CravingSosModal } from './components/sos/CravingSosModal';
 import { SlipRecoverySheet } from './components/slip/SlipRecoverySheet';
@@ -17,6 +19,7 @@ import { HomeScreenWidgetSimulator } from './components/widgets/HomeScreenWidget
 import { MilestoneBurst } from './components/celebration/MilestoneBurst';
 import { EntryDetailsSheet } from './components/today/EntryDetailsSheet';
 import { calculateCurrentStreak, calculateSmokeFreeDays, calculateRoundStatus } from './domain/calculations';
+import { syncWidget } from './widgetSync';
 import { MILESTONES } from './content/milestones';
 import { RotateCcw } from 'lucide-react';
 
@@ -35,6 +38,7 @@ export default function App() {
   const [showOnboarding, setShowOnboarding] = useState(() => !plan.onboardingCompleted);
   const [showWidgetSimulator, setShowWidgetSimulator] = useState(false);
   const [showCustomizeHome, setShowCustomizeHome] = useState(false);
+  const [showLogSheet, setShowLogSheet] = useState(false);
 
   // 2-Minute Undo snackbar state (120 seconds duration)
   const [undoEntryId, setUndoEntryId] = useState<string | null>(null);
@@ -58,21 +62,37 @@ export default function App() {
     return unsubscribe;
   }, []);
 
-  // Deep Link Support: /craving or #craving opens craving help directly into breathing
+  // Deep Link Support: /craving or #craving opens craving help directly into breathing,
+  // #log opens the fast log sheet (used by the installed app's long-press shortcuts).
   useEffect(() => {
     const handleDeepLink = () => {
-      const isCravingRoute =
-        window.location.hash === '#craving' ||
-        window.location.hash === '#/craving' ||
-        window.location.pathname.endsWith('/craving');
-      if (isCravingRoute) {
-        setShowSosModal(true);
-      }
+      const hash = window.location.hash;
+      const isCravingRoute = hash === '#craving' || hash === '#/craving' || window.location.pathname.endsWith('/craving');
+      const isLogRoute = hash === '#log' || hash === '#/log' || window.location.pathname.endsWith('/log');
+      if (isCravingRoute) setShowSosModal(true);
+      if (isLogRoute) setShowLogSheet(true);
     };
     handleDeepLink();
     window.addEventListener('hashchange', handleDeepLink);
     return () => window.removeEventListener('hashchange', handleDeepLink);
   }, []);
+
+  // Keep the Android home-screen widget's cached values in step with the plan.
+  useEffect(() => {
+    void syncWidget({
+      quitDate: plan.quitStartDate,
+      cigsPerDay: plan.usualPerDay,
+      packSize: plan.cigarettesPerPack,
+      packCost: plan.packPrice,
+      currency: plan.currency,
+    });
+  }, [plan.quitStartDate, plan.usualPerDay, plan.cigarettesPerPack, plan.packPrice, plan.currency]);
+
+  const clearLogHash = () => {
+    if (window.location.hash === '#log' || window.location.hash === '#/log') {
+      window.history.replaceState(null, '', window.location.pathname);
+    }
+  };
 
   const handleOpenSosModal = () => {
     window.location.hash = 'craving';
@@ -166,12 +186,27 @@ export default function App() {
     setUndoEntryId(newEntry.id);
     setUndoCountdown(120); // 2-minute undo per spec
 
-    // In quit mode, show non-punitive slip recovery sheet after a subtle delay
-    if (plan.mode === 'QUIT') {
+    // In quit mode, offer non-punitive slip recovery — but only for a cigarette
+    // just smoked. Backdated entries are history, not a moment that needs triage.
+    const isJustNow = !extraData?.timestamp || Date.now() - extraData.timestamp < 10 * 60 * 1000;
+    if (plan.mode === 'QUIT' && isJustNow) {
       setTimeout(() => {
         setShowSlipSheet(true);
       }, 400);
     }
+  };
+
+  // Daily identity vote: one tap, one entry, no streak to break
+  const handlePledge = () => {
+    const entry: Entry = {
+      id: `pledge_${Date.now()}`,
+      timestamp: Date.now(),
+      timezoneOffset: new Date().getTimezoneOffset(),
+      type: 'PLEDGE',
+      habitId: 'smoking',
+      source: 'app',
+    };
+    Storage.addEntry(entry);
   };
 
   const handleUndo = () => {
@@ -269,6 +304,9 @@ export default function App() {
                   onOpenToolkit={() => setActiveTab('toolkit')}
                   onOpenSos={handleOpenSosModal}
                   onOpenCustomize={() => setShowCustomizeHome(true)}
+                  onOpenPace={() => setActiveTab('pace')}
+                  onOpenLogSheet={() => setShowLogSheet(true)}
+                  onPledge={handlePledge}
                 />
               )}
 
@@ -278,9 +316,19 @@ export default function App() {
                 confirmBeforeLog={plan.confirmBeforeLog}
                 onLogCigarette={handleLogCigarette}
                 onOpenSos={handleOpenSosModal}
+                onOpenLogSheet={() => setShowLogSheet(true)}
                 onOpenCustomize={() => setShowCustomizeHome(true)}
               />
             </div>
+          )}
+
+          {activeTab === 'pace' && (
+            <PaceTab
+              plan={plan}
+              entries={entries}
+              onLog={() => setShowLogSheet(true)}
+              onOpenSos={handleOpenSosModal}
+            />
           )}
 
           {activeTab === 'journey' && (
@@ -405,6 +453,19 @@ export default function App() {
           onRecordToolFeedback={handleToolFeedback}
         />
       )}
+
+      {/* Fast, honest cigarette logging (time chips + triggers + pace preview) */}
+      <SmokeLogSheet
+        isOpen={showLogSheet}
+        plan={plan}
+        entries={entries}
+        onClose={() => {
+          setShowLogSheet(false);
+          clearLogHash();
+        }}
+        onSubmit={(data) => handleLogCigarette(data)}
+        onResisted={() => handleCravingBeaten(0)}
+      />
 
       {/* Slip Recovery Sheet (Non-Punitive) */}
       {showSlipSheet && (

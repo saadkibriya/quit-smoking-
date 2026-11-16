@@ -1,8 +1,8 @@
 import React from 'react';
-import { Calendar, Compass, Wrench } from 'lucide-react';
+import { Calendar, Compass, Gauge, Wrench } from 'lucide-react';
 import { Sound } from '../data/sound';
 
-export type TabId = 'today' | 'journey' | 'toolkit';
+export type TabId = 'today' | 'pace' | 'journey' | 'toolkit';
 
 interface BottomNavProps {
   activeTab: TabId;
@@ -12,6 +12,7 @@ interface BottomNavProps {
 export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, onChangeTab }) => {
   const tabs: Array<{ id: TabId; label: string; icon: React.ReactNode }> = [
     { id: 'today', label: 'Today', icon: <Calendar className="w-5 h-5" /> },
+    { id: 'pace', label: 'Pace', icon: <Gauge className="w-5 h-5" /> },
     { id: 'journey', label: 'Progress', icon: <Compass className="w-5 h-5" /> },
     { id: 'toolkit', label: 'Toolkit', icon: <Wrench className="w-5 h-5" /> },
   ];
@@ -21,7 +22,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, onChangeTab }) 
       aria-label="Main Navigation"
       className="fixed bottom-0 left-0 right-0 z-40 bg-[#FFFFFF] dark:bg-[#000000] border-t border-[#C4C4C4] dark:border-[#3D3D3D] transition-colors"
     >
-      <div className="max-w-2xl mx-auto grid grid-cols-3 h-16 items-center px-4">
+      <div className="max-w-2xl mx-auto grid grid-cols-4 h-16 items-center px-2">
         {tabs.map((tab) => {
           const isActive = activeTab === tab.id;
           return (

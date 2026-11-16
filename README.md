@@ -6,6 +6,19 @@
 
 ## Key Features
 
+0. **Rate Meter — widen the distance between cigarettes (new core loop)**:
+   - Measures your personal median gap (28-day baseline, overnight gaps excluded) and sets a target ~20% wider.
+   - Shows the live gap since your last cigarette against that target, and compares it with your earlier entries (previous gap, personal usual, 7-vs-7 trend).
+   - Status is diagnostic, never punitive: `EARLY` (the trap is pulling), `ON_PACE` (hold ten more minutes), `STRETCHED` (the distance is growing).
+   - New **Pace** tab: last-12-gap chart with target line, 7-day distance table, hardest-hour histogram, stretch streak.
+
+0b. **Nonsmoker identity, not deprivation**:
+   - "I am a nonsmoker" identity statement with a one-tap daily vote (`PLEDGE` entry).
+   - Vote ledger: urges held, clean days, honest logs. A slip costs you nothing already earned.
+   - Daily mindset principle with its source: *Atomic Habits* (identity votes, 2-minute rule, environment design, never miss twice), Allen Carr's *Easy Way*, Gollwitzer's implementation intentions.
+
+0c. **Fast logging**: one tap "I smoked" logs now; the log sheet offers Now / 10m / 30m / 1h / 2h / earlier, trigger chips, urge strength, and tells you whether the entry widens or shortens your gap *before* you save.
+
 1. **One-Tap Instant Logging & Non-Punitive Slip Recovery**:
    - One tap on **"I smoked"** instantly logs with the current timestamp and a 6-second Undo countdown snackbar.
    - Dual counters: a slip resets the current streak, but **cumulative smoke-free days, cigarettes avoided, money kept, and milestone badges are NEVER lost or reset**.

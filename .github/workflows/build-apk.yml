@@ -19,14 +19,14 @@ jobs:
           node-version: 20
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
+
+      - name: Generate PWA icons
+        run: npm run icons
 
       - name: Detect Capacitor major version
         id: core
         run: echo "major=$(node -p "require('@capacitor/core/package.json').version.split('.')[0]")" >> "$GITHUB_OUTPUT"
-
-      - name: Install Preferences plugin (same major as core)
-        run: npm install "@capacitor/preferences@^${{ steps.core.outputs.major }}.0.0" --no-save
 
       - uses: actions/setup-java@v4
         with:

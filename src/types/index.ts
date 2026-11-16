@@ -64,6 +64,8 @@ export interface WidgetLayoutItem {
 
 export type HomeCardId =
   | 'TIMER'
+  | 'PACE_METER'
+  | 'IDENTITY'
   | 'MONEY_SAVED'
   | 'NOT_SMOKED'
   | 'NEXT_MILESTONE'

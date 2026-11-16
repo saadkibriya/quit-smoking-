@@ -14,10 +14,15 @@ const STORAGE_KEYS = {
 // Section 1 & 2 default home layout (Progressive disclosure: 4 cards only)
 export const DEFAULT_HOME_LAYOUT: HomeLayoutItem[] = [
   { cardId: 'TIMER', visible: true, size: 'W' },
+  { cardId: 'PACE_METER', visible: true, size: 'W' },
   { cardId: 'MONEY_SAVED', visible: true, size: 'S' },
   { cardId: 'NOT_SMOKED', visible: true, size: 'S' },
   { cardId: 'NEXT_MILESTONE', visible: true, size: 'W' },
+  { cardId: 'IDENTITY', visible: true, size: 'W' },
 ];
+
+/** Bump when new cards should be offered to existing users. */
+export const HOME_LAYOUT_VERSION = 2;
 
 export interface CardMeta {
   id: HomeCardId;
@@ -27,8 +32,36 @@ export interface CardMeta {
   isPermanent?: boolean;
 }
 
+/**
+ * Existing users keep their card order, but new headline cards are folded in
+ * once so nobody has to go hunting in Customize to find them.
+ */
+function migrateHomeLayout(layout: HomeLayoutItem[], fromVersion: number): HomeLayoutItem[] {
+  if (fromVersion >= HOME_LAYOUT_VERSION) return layout;
+
+  const next = [...layout];
+  const has = (id: HomeCardId) => next.some((item) => item.cardId === id);
+
+  if (!has('PACE_METER')) {
+    const timerIndex = next.findIndex((item) => item.cardId === 'TIMER');
+    next.splice(timerIndex >= 0 ? timerIndex + 1 : 0, 0, {
+      cardId: 'PACE_METER',
+      visible: true,
+      size: 'W',
+    });
+  }
+
+  if (!has('IDENTITY')) {
+    next.push({ cardId: 'IDENTITY', visible: true, size: 'W' });
+  }
+
+  return next;
+}
+
 export const ALL_HOME_CARDS: CardMeta[] = [
   { id: 'TIMER', label: 'Smoke-free timer', description: 'Live-ticking smoke-free days and hours timer', defaultSize: 'W', isPermanent: true },
+  { id: 'PACE_METER', label: 'Rate meter', description: 'Time since your last cigarette vs your usual gap, with a target to beat', defaultSize: 'W' },
+  { id: 'IDENTITY', label: 'Nonsmoker identity', description: 'Your identity statement, vote ledger and daily mindset principle', defaultSize: 'W' },
   { id: 'MONEY_SAVED', label: 'Money saved', description: 'Real-time calculation of money saved since quitting', defaultSize: 'S' },
   { id: 'NOT_SMOKED', label: 'Cigarettes not smoked', description: 'Total count of avoided cigarettes based on usual intake', defaultSize: 'S' },
   { id: 'NEXT_MILESTONE', label: 'Next health milestone', description: 'WHO/NHS certified milestone with dot progress bar', defaultSize: 'W' },
@@ -176,10 +209,15 @@ export const Storage = {
       const raw = localStorage.getItem(STORAGE_KEYS.PLAN);
       if (!raw) return DEFAULT_PLAN;
       const parsed = JSON.parse(raw);
+      const layoutVersion = parsed.layoutVersion || 1;
+      const savedLayout: HomeLayoutItem[] =
+        parsed.homeLayout && parsed.homeLayout.length > 0 ? parsed.homeLayout : DEFAULT_HOME_LAYOUT;
+
       return {
         ...DEFAULT_PLAN,
         ...parsed,
-        homeLayout: parsed.homeLayout && parsed.homeLayout.length > 0 ? parsed.homeLayout : DEFAULT_HOME_LAYOUT,
+        layoutVersion: Math.max(layoutVersion, HOME_LAYOUT_VERSION),
+        homeLayout: migrateHomeLayout(savedLayout, layoutVersion),
       };
     } catch {
       return DEFAULT_PLAN;

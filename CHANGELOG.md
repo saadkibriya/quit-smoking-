@@ -2,6 +2,61 @@
 
 All notable changes to Unlit are documented here per `infos.md` (Worker Rules) and `roadmap.md`.
 
+## [2026-11-16] — Installable build: icons, offline shell, app shortcuts
+
+### Install readiness
+- **Icons generated from code** (`scripts/generate-icons.mjs`, `npm run icons`): 192/512 maskable
+  plus a 180 Apple touch icon. The manifest had been pointing at files that did not exist, which
+  blocked browser install entirely.
+- **Service worker** (`public/sw.js`) with an offline app shell: network-first navigations with cache
+  fallback, cache-first hashed assets. Registered in production builds only.
+- **Manifest** gains `id`, `scope`, `lang`, categories and separate `any`/`maskable` icon entries.
+
+### Lazy-user ergonomics
+- App shortcut **"Log a cigarette"** (`/#log`) — long-press the launcher icon and log in one tap.
+- `#log` deep link opens the log sheet directly; closing it clears the hash.
+- **Android home-screen widget now receives real data**: `@capacitor/preferences` is a real dependency
+  and `syncWidget()` runs whenever the plan changes (it was dead code before).
+
+### Build pipeline
+- Removed the stale duplicate `build-apk.ym` workflow (it pointed at a non-existent `apk/` folder).
+- CI installs with `npm ci`, generates icons, and no longer installs Preferences ad hoc.
+- `android/` is generated at build time and git-ignored.
+
+## [2026-11-14] — Rate Meter, Nonsmoker Identity, Pace Dashboard
+
+### 1. Rate Meter (new core loop)
+- New `src/domain/pacing.ts`: measures the **distance between cigarettes**.
+  - Personal baseline = median gap over 28 days, overnight gaps (>12h) excluded.
+  - Target = ~20% wider than your own baseline, rounded to 5 minutes.
+  - Compares the current gap with your earlier entries (previous gap, personal usual, 7-vs-7 trend).
+  - Statuses: `CALIBRATING`, `EARLY`, `ON_PACE`, `STRETCHED` — diagnostic, never punitive.
+- Evidence framing kept honest: NICE *Cut Down to Stop* lists interval stretching as a valid
+  reduction method, and scheduled stretching reduced craving/withdrawal in a 2023 RCT, but abrupt
+  quitting remains the strongest path to lasting abstinence. The meter is an on-ramp, not a destination.
+
+### 2. Nonsmoker identity layer
+- New `src/content/identity.ts`: identity statement, vote ledger, and 8 sourced mindset principles
+  (Atomic Habits, The Easy Way to Stop Smoking, implementation intentions).
+- One-tap daily vote logs a `PLEDGE` entry; votes = urges held + clean days + honest logs.
+
+### 3. Pace dashboard (4th tab)
+- Last-12-gap bar chart with a dashed target line and stretch streak.
+- 7-day distance table (smoked / longest gap / average gap).
+- Hardest-hour histogram (30 days) that turns weak hours into a designed plan.
+
+### 4. Faster logging
+- New `SmokeLogSheet`: Now / 10m / 30m / 1h / 2h / earlier chips, trigger chips, urge strength,
+  and a live preview of whether the entry widens or shortens your gap before saving.
+- Old manual-entry modal removed; long-press or the clock button opens the sheet.
+- Slip recovery now only opens for a cigarette smoked just now, not backdated history.
+
+### 5. Fixes
+- `npm install` failed outright: root `esbuild@^0.25` conflicted with Vite 8's peer range. Aligned to `^0.28`.
+- `src/domain/aiCoach.ts` referenced an undefined `chatMessages`, so the backend coach fallback
+  always threw and silently degraded to the offline engine. Now uses `chatHistory`.
+- Home layout migrates to version 2 so existing users receive the new cards without losing order.
+
 ## [2026-11-07] — Nothing OS Redesign, Simple Home, Craving Help & W1–W9 Widget Suite
 
 ### 1. Simple Home Screen (Section 1)

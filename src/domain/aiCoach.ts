@@ -162,7 +162,7 @@ If no plan update is needed, do NOT output a json code block. Just speak normall
         userMessage,
         summaryJson: dataSummary,
         coachStyle: plan.coachStyle,
-        chatHistory: chatMessages.slice(-6),
+        chatHistory: chatHistory.slice(-6),
       }),
     });
     if (res.ok) {
