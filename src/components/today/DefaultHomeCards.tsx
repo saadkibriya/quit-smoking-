@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { UserPlan, Entry, HomeLayoutItem } from '../../types';
+import { UserPlan, Entry, HomeLayoutItem, HomeCardId } from '../../types';
 import {
   calculateStats,
   calculateRoundStatus,
@@ -22,10 +22,11 @@ interface DefaultHomeCardsProps {
   onOpenPace: () => void;
   onOpenLogSheet: () => void;
   onPledge: () => void;
+  /** Cards already represented by the home hero, so they are not shown twice. */
+  excludeCardIds?: HomeCardId[];
 }
 
-const cardBase =
-  'bg-[#F2F2F2] dark:bg-[#141414] border border-[#C4C4C4] dark:border-[#2A2A2A] rounded-3xl p-5 transition-all select-none hover:border-black dark:hover:border-white shadow-xs';
+const cardBase = 'home-deck-card p-5 transition-all select-none';
 
 /**
  * Renders the home widget grid in the user's saved order. Cards are real widgets:
@@ -42,6 +43,7 @@ export const DefaultHomeCards: React.FC<DefaultHomeCardsProps> = ({
   onOpenPace,
   onOpenLogSheet,
   onPledge,
+  excludeCardIds = [],
 }) => {
   const [now, setNow] = useState(() => Date.now());
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -88,7 +90,9 @@ export const DefaultHomeCards: React.FC<DefaultHomeCardsProps> = ({
   };
 
   const currencySymbol = plan.currency || '৳';
-  const visibleCards = homeLayout.filter((item) => item.visible);
+  const visibleCards = homeLayout.filter(
+    (item) => item.visible && !excludeCardIds.includes(item.cardId)
+  );
 
   const renderCard = (item: HomeLayoutItem) => {
     switch (item.cardId) {

@@ -2,6 +2,23 @@
 
 All notable changes to Unlit are documented here per `infos.md` (Worker Rules) and `roadmap.md`.
 
+## [2026-11-20] — Fix the home-screen widget showing no data
+
+### Fixed
+- **The widget never refreshed after the app wrote its values.** It only rebuilt itself
+  when first added and on the system's 30-minute tick, so it sat on its placeholder
+  text indefinitely. `MainActivity` now rebuilds every placed widget on open, resume
+  and leave, plus a delayed rebuild after the first paint so a cold start shows data
+  immediately.
+- **Widget reads are defensive.** Any failure while reading preferences or attaching
+  the tap intent now falls back instead of dropping the whole update, so the widget
+  can no longer come out blank.
+- **Layout no longer clips in a 2x2 cell**: 44sp day counter (bold, single line) and
+  14sp figures instead of 52sp/16sp.
+- **Sub-day streaks show hours** (`12h · SMOKE-FREE SO FAR`) instead of a bare `0`.
+- Added `android:label` so the picker lists the widget as "Unlit streak", and rebuild
+  on resize.
+
 ## [2026-11-16] — Installable build: icons, offline shell, app shortcuts
 
 ### Install readiness

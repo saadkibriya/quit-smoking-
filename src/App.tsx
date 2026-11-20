@@ -18,6 +18,8 @@ import { OnboardingWizard } from './components/onboarding/OnboardingWizard';
 import { HomeScreenWidgetSimulator } from './components/widgets/HomeScreenWidgetSimulator';
 import { MilestoneBurst } from './components/celebration/MilestoneBurst';
 import { EntryDetailsSheet } from './components/today/EntryDetailsSheet';
+import { HomeScreen } from './components/home/HomeScreen';
+import './components/home/home.css';
 import { calculateCurrentStreak, calculateSmokeFreeDays, calculateRoundStatus } from './domain/calculations';
 import { syncWidget } from './widgetSync';
 import { MILESTONES } from './content/milestones';
@@ -272,45 +274,47 @@ export default function App() {
 
       {/* Main App Frame */}
       <div className="w-full max-w-2xl min-h-screen flex flex-col relative bg-[#FFFFFF] dark:bg-[#000000] border-x-0 sm:border-x border-[#C4C4C4] dark:border-[#2A2A2A]">
-        {/* Top App Bar with Launcher & Widgets switch */}
-        <TopBar
-          plan={plan}
-          currentTheme={resolvedTheme}
-          onToggleTheme={handleToggleTheme}
-          onOpenSos={handleOpenSosModal}
-          onOpenLauncher={() => setShowWidgetSimulator(true)}
-          dayGreeting={dayGreeting}
-        />
+        {/* Top App Bar with Launcher & Widgets switch. The redesigned home carries its own bar. */}
+        {!(activeTab === 'today' && plan.mode === 'QUIT') && (
+          <TopBar
+            plan={plan}
+            currentTheme={resolvedTheme}
+            onToggleTheme={handleToggleTheme}
+            onOpenSos={handleOpenSosModal}
+            onOpenLauncher={() => setShowWidgetSimulator(true)}
+            dayGreeting={dayGreeting}
+          />
+        )}
 
         {/* Tab Content */}
         <main className="flex-1 w-full">
-          {activeTab === 'today' && (
-            <div className="space-y-4 px-4 pt-3 pb-24">
-              {/* Check if in prep phase or non-quit mode */}
-              {plan.mode !== 'QUIT' ? (
-                <HeroCard
-                  plan={plan}
-                  entries={entries}
-                  onOpenMilestones={() => setActiveTab('journey')}
-                  onOpenPlan={() => setActiveTab('toolkit')}
-                />
-              ) : (
-                /* Section 1 & 2: Default 4 cards + any customized cards */
-                <DefaultHomeCards
-                  plan={plan}
-                  entries={entries}
-                  homeLayout={plan.homeLayout && plan.homeLayout.length > 0 ? plan.homeLayout : DEFAULT_HOME_LAYOUT}
-                  onOpenJourney={() => setActiveTab('journey')}
-                  onOpenToolkit={() => setActiveTab('toolkit')}
-                  onOpenSos={handleOpenSosModal}
-                  onOpenCustomize={() => setShowCustomizeHome(true)}
-                  onOpenPace={() => setActiveTab('pace')}
-                  onOpenLogSheet={() => setShowLogSheet(true)}
-                  onPledge={handlePledge}
-                />
-              )}
+          {activeTab === 'today' && plan.mode === 'QUIT' && (
+            <HomeScreen
+              plan={plan}
+              entries={entries}
+              homeLayout={plan.homeLayout && plan.homeLayout.length > 0 ? plan.homeLayout : DEFAULT_HOME_LAYOUT}
+              onOpenJourney={() => setActiveTab('journey')}
+              onOpenToolkit={() => setActiveTab('toolkit')}
+              onOpenSos={handleOpenSosModal}
+              onOpenCustomize={() => setShowCustomizeHome(true)}
+              onOpenPace={() => setActiveTab('pace')}
+              onOpenLogSheet={() => setShowLogSheet(true)}
+              onPledge={handlePledge}
+              onLogCigarette={() => handleLogCigarette()}
+              onOpenSettings={() => setActiveTab('toolkit')}
+            />
+          )}
 
-              {/* Section 1: Quick Actions (Ride out a craving & I smoked + Customize home link) */}
+          {/* Cut-down and track modes keep the original home until they get the same treatment. */}
+          {activeTab === 'today' && plan.mode !== 'QUIT' && (
+            <div className="space-y-4 px-4 pt-3 pb-40">
+              <HeroCard
+                plan={plan}
+                entries={entries}
+                onOpenMilestones={() => setActiveTab('journey')}
+                onOpenPlan={() => setActiveTab('toolkit')}
+              />
+
               <QuickActions
                 mode={plan.mode}
                 confirmBeforeLog={plan.confirmBeforeLog}
@@ -408,7 +412,7 @@ export default function App() {
         )}
 
         {/* Bottom Navigation */}
-        <BottomNav activeTab={activeTab} onChangeTab={setActiveTab} />
+        <BottomNav activeTab={activeTab} onChangeTab={setActiveTab} onCraving={handleOpenSosModal} />
       </div>
 
       {/* Customize Home Drawer (Section 3) */}
