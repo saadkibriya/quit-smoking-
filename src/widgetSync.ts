@@ -1,7 +1,7 @@
 import { Preferences } from '@capacitor/preferences';
 
 /**
- * Pushes the handful of values the Android home-screen widget needs into the
+ * Pushes the handful of values the Android home-screen widgets need into the
  * Preferences store (which the native widget reads from `CapacitorStorage`).
  *
  * On the web this resolves to a harmless no-op wrapper, so callers never need
@@ -13,6 +13,8 @@ export async function syncWidget(d: {
   packSize?: number;
   packCost: number;
   currency?: string;
+  /** Cigarettes actually logged since the quit date, so the widget can net them out. */
+  loggedCigs?: number;
 }): Promise<void> {
   const quitMs = new Date(d.quitDate).getTime();
   if (!Number.isFinite(quitMs)) return;
@@ -24,6 +26,7 @@ export async function syncWidget(d: {
       Preferences.set({ key: 'unlit_pack_size', value: String(d.packSize ?? 20) }),
       Preferences.set({ key: 'unlit_pack_cost', value: String(d.packCost) }),
       Preferences.set({ key: 'unlit_currency', value: d.currency ?? '৳' }),
+      Preferences.set({ key: 'unlit_logged_total', value: String(d.loggedCigs ?? 0) }),
     ]);
   } catch {
     // Not running inside the native shell, or the plugin is unavailable.

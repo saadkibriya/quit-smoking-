@@ -2,6 +2,27 @@
 
 All notable changes to Unlit are documented here per `infos.md` (Worker Rules) and `roadmap.md`.
 
+## [2026-11-20] — Two simple, size-aware home-screen widgets
+
+### Added
+- **`Unlit days` widget.** The hero is the smoke-free day count and nothing else in 2x2.
+  Tapping the number opens a small native dialog that asks how many cigarettes you
+  smoked, queues the count, and the app imports it as real entries on the next open
+  (plus a widget refresh, so the stats move immediately).
+- **`Unlit time` widget.** The hero is the elapsed time, formatted for the scale:
+  `8m` → `5h 42m` → `12d 4h`, with the day count and quit date underneath.
+- **Layouts follow the cell size.** 2x2 is the number alone, 2x4 stacks the details,
+  4x2 puts the figures beside the hero, 4x4 is the full card with divider and hint.
+  The provider re-renders on every resize (`onAppWidgetOptionsChanged`).
+- **Light and dark by system theme**: white card with black type, or black card with
+  white type, both with the same rounding and hairline border.
+
+### Changed
+- Widget figures now net out logged cigarettes (`unlit_logged_total`), so `NOT SMOKED`
+  and `SAVED` agree with the app instead of assuming a perfect streak.
+- The old single `QuitWidgetProvider` is replaced; both new widgets are picked from the
+  widget picker and can be resized independently.
+
 ## [2026-11-20] — Fix the home-screen widget showing no data
 
 ### Fixed

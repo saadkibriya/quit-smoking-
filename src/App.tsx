@@ -22,6 +22,7 @@ import { HomeScreen } from './components/home/HomeScreen';
 import './components/home/home.css';
 import { calculateCurrentStreak, calculateSmokeFreeDays, calculateRoundStatus } from './domain/calculations';
 import { syncWidget } from './widgetSync';
+import { drainWidgetLogs } from './widgetLogSync';
 import { MILESTONES } from './content/milestones';
 import { RotateCcw } from 'lucide-react';
 
@@ -79,16 +80,46 @@ export default function App() {
     return () => window.removeEventListener('hashchange', handleDeepLink);
   }, []);
 
-  // Keep the Android home-screen widget's cached values in step with the plan.
+  // Keep the Android home-screen widgets' cached values in step with the plan.
   useEffect(() => {
+    const quitMs = new Date(plan.quitStartDate).getTime();
+    const loggedCigs = entries.filter(
+      (e) =>
+        !e.undone &&
+        (e.type === 'CIGARETTE' || e.type === 'smoked') &&
+        Number.isFinite(quitMs) &&
+        e.timestamp >= quitMs
+    ).length;
+
     void syncWidget({
       quitDate: plan.quitStartDate,
       cigsPerDay: plan.usualPerDay,
       packSize: plan.cigarettesPerPack,
       packCost: plan.packPrice,
       currency: plan.currency,
+      loggedCigs,
     });
-  }, [plan.quitStartDate, plan.usualPerDay, plan.cigarettesPerPack, plan.packPrice, plan.currency]);
+  }, [
+    entries,
+    plan.quitStartDate,
+    plan.usualPerDay,
+    plan.cigarettesPerPack,
+    plan.packPrice,
+    plan.currency,
+  ]);
+
+  // Numbers typed into the widget's quick-log dialog arrive here as a queue.
+  useEffect(() => {
+    const drain = () => {
+      void drainWidgetLogs();
+    };
+    drain();
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') drain();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => document.removeEventListener('visibilitychange', onVisibility);
+  }, []);
 
   const clearLogHash = () => {
     if (window.location.hash === '#log' || window.location.hash === '#/log') {
