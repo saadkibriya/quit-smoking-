@@ -77,7 +77,9 @@ public abstract class UnlitWidgetBase extends AppWidgetProvider {
     @Override
     public void onAppWidgetOptionsChanged(Context context, AppWidgetManager manager, int id, Bundle options) {
         // Resizing 2x2 -> 2x4 -> 4x4 -> 4x2 changes the layout, not just padding.
-        updateOne(context, manager, id, mode());
+        // Paint from the bundle the system just handed us: the manager's stored
+        // options can still hold the previous size at this point.
+        updateOne(context, manager, id, mode(), options);
     }
 
     @Override
@@ -133,8 +135,12 @@ public abstract class UnlitWidgetBase extends AppWidgetProvider {
     }
 
     private static void updateOne(Context context, AppWidgetManager manager, int id, int mode) {
+        updateOne(context, manager, id, mode, null);
+    }
+
+    private static void updateOne(Context context, AppWidgetManager manager, int id, int mode, Bundle options) {
         try {
-            manager.updateAppWidget(id, build(context, manager, id, mode));
+            manager.updateAppWidget(id, build(context, manager, id, mode, options));
         } catch (Throwable ignored) {
             // Keep the other instances alive.
         }
@@ -147,23 +153,42 @@ public abstract class UnlitWidgetBase extends AppWidgetProvider {
         return R.layout.widget_small;
     }
 
-    /** Cell size comes back in dp; ~2 cells never reach 200dp, 4 cells always do. */
-    private static int sizeClass(AppWidgetManager manager, int id) {
-        int w = 110;
-        int h = 110;
+    private static Bundle optionsFor(AppWidgetManager manager, int id, Bundle given) {
+        if (given != null && !given.isEmpty()) return given;
         try {
-            Bundle o = manager.getAppWidgetOptions(id);
-            if (o != null) {
-                w = Math.max(o.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 110),
-                             o.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, 110));
-                h = Math.max(o.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 110),
-                             o.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 110));
-            }
+            Bundle stored = manager.getAppWidgetOptions(id);
+            if (stored != null) return stored;
         } catch (Throwable ignored) {
-            // Old launchers: keep the compact layout.
+            // Fall through to the compact size.
         }
-        boolean wide = w >= 220;
-        boolean tall = h >= 210;
+        return new Bundle();
+    }
+
+    /**
+     * The options bundle holds a size *range*, not one size: a launcher fills in
+     * min width / max height for portrait and max width / min height for
+     * landscape. Reading the max of all four (as this used to) mixes the two
+     * orientations, so a 2x2 phone widget looks 4 columns wide and the layout
+     * never changes when the user resizes it. Ask the current orientation which
+     * end of the range is the live size instead.
+     *
+     * Sizes are dp. A cell is ~70dp, so 2 cells report ~110dp, 3 cells ~180dp
+     * and 4 cells ~250dp; 185dp separates "two cells" from "three or more".
+     */
+    private static int sizeClass(Context context, AppWidgetManager manager, int id, Bundle options) {
+        Bundle o = optionsFor(manager, id, options);
+        boolean portrait = context.getResources().getConfiguration().orientation
+                != Configuration.ORIENTATION_LANDSCAPE;
+        int w = o.getInt(portrait ? AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH
+                                  : AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, 0);
+        int h = o.getInt(portrait ? AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT
+                                  : AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 0);
+        if (w <= 0) w = o.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, 0);
+        if (h <= 0) h = o.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 0);
+        if (w <= 0) w = 110;
+        if (h <= 0) h = 110;
+        boolean wide = w >= 185;
+        boolean tall = h >= 185;
         if (wide && tall) return SIZE_LARGE;
         if (wide) return SIZE_WIDE;
         if (tall) return SIZE_TALL;
@@ -254,10 +279,10 @@ public abstract class UnlitWidgetBase extends AppWidgetProvider {
         return base;
     }
 
-    private static RemoteViews build(Context context, AppWidgetManager manager, int id, int mode) {
+    private static RemoteViews build(Context context, AppWidgetManager manager, int id, int mode, Bundle options) {
         Data d = read(context);
         boolean night = isNight(context);
-        int size = sizeClass(manager, id);
+        int size = sizeClass(context, manager, id, options);
 
         RemoteViews v = new RemoteViews(context.getPackageName(), layoutFor(size));
 
@@ -1010,10 +1035,15 @@ import re, sys
 path = sys.argv[1]
 src = open(path, encoding='utf-8').read()
 
-# Remove any receiver block from a previous run of this script.
-src = re.sub(r'\s*<receiver android:name="\.QuitWidgetProvider".*?</receiver>', '', src, flags=re.S)
-src = re.sub(r'\s*<receiver android:name="\.(Days|Clock)WidgetProvider".*?</receiver>', '', src, flags=re.S)
-src = re.sub(r'\s*<activity android:name="\.SmokeQuickLogActivity".*?(/>|</activity>)', '', src, flags=re.S)
+# Remove any widget/dialog block from a previous run of this script. The
+# android:name attribute sits on its own line in the generated XML, so the
+# patterns have to allow newlines and other attributes between the tag and it.
+src = re.sub(
+    r'\s*<receiver\b[^>]*?android:name="\.(?:Quit|Days|Clock)WidgetProvider".*?</receiver>',
+    '', src, flags=re.S)
+src = re.sub(
+    r'\s*<activity\b[^>]*?android:name="\.SmokeQuickLogActivity".*?(?:/>|</activity>)',
+    '', src, flags=re.S)
 
 receivers = '''
         <receiver
@@ -1050,7 +1080,11 @@ receivers = '''
             android:windowSoftInputMode="stateVisible|adjustResize" />
 '''
 
-src = src.replace('    </application>', receivers + '    </application>', 1)
+# Match the closing tag whatever the surrounding indentation is, so a manifest
+# formatted differently by a future Capacitor release still gets the widgets.
+if '</application>' not in src:
+    raise SystemExit('AndroidManifest.xml has no </application> to insert into')
+src = re.sub(r'[ \t]*</application>', lambda m: receivers + '    </application>', src, count=1)
 open(path, 'w', encoding='utf-8').write(src)
 PY
 

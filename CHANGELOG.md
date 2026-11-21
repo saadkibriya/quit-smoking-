@@ -23,6 +23,18 @@ All notable changes to Unlit are documented here per `infos.md` (Worker Rules) a
 - The old single `QuitWidgetProvider` is replaced; both new widgets are picked from the
   widget picker and can be resized independently.
 
+### Fixed
+- **Resizing now changes the layout.** Launchers report a size *range*, not one size: a
+  phone in portrait fills in min width / max height, in landscape max width / min height.
+  The providers were reading the max of all four, which mixed the orientations and made a
+  2x2 widget look 4 columns wide — so every size landed in the same layout. The live size
+  is now picked from the range with the current orientation, the resize callback paints
+  from the options bundle it was just handed (the manager can still report the old size at
+  that moment), and the two-cell/three-cell threshold is 185dp.
+- **Manifest injection is idempotent.** Re-running `scripts/add-widget.sh` used to leave a
+  duplicate receiver behind, which would fail the install; the cleanup now matches the
+  generated multi-line tags and inserts before `</application>` whatever its indentation.
+
 ## [2026-11-20] — Fix the home-screen widget showing no data
 
 ### Fixed
