@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { UserPlan, HabitMode, CoachStyle, TimeToFirstCigarette, IfThenPlan } from '../../types';
+import { UserPlan, HabitMode, HabitTarget, CoachStyle, TimeToFirstCigarette, IfThenPlan } from '../../types';
+import { FAP_SETUP_NOTE, FAP_WARNINGS } from '../../content/fapGuidance';
 import { Sound } from '../../data/sound';
 import { ArrowRight, ArrowLeft, Check, Sparkles, Shield, Heart } from 'lucide-react';
 
@@ -13,7 +14,48 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   onFinishOnboarding,
 }) => {
   const [step, setStep] = useState(1);
-  const totalSteps = 15; // 1 to 14 + 15 (Your Plan summary)
+
+  // Onboarding opens by asking which habit(s) this is about. The step order is
+  // built from that answer, so a fap-only user never answers cigarette pricing.
+  const [targets, setTargets] = useState<HabitTarget[]>(
+    initialPlan.targets && initialPlan.targets.length > 0 ? initialPlan.targets : ['SMOKE']
+  );
+  const smokeSelected = targets.includes('SMOKE');
+  const fapSelected = targets.includes('FAP');
+  const order = [
+    1,
+    ...(smokeSelected ? [2, 3, 4] : []),
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    ...(fapSelected ? [16] : []),
+    15,
+  ];
+  const totalSteps = order.length;
+  const stepNumber = Math.max(1, order.indexOf(step) + 1);
+
+  const fapDateValue = (() => {
+    const d = new Date(initialPlan.fapStartDate || Date.now());
+    const source = isNaN(d.getTime()) ? new Date() : d;
+    const y = source.getFullYear();
+    const m = String(source.getMonth() + 1).padStart(2, '0');
+    const day = String(source.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  })();
+  const [fapStartDate, setFapStartDate] = useState<string>(fapDateValue);
+  const [fapPerDay, setFapPerDay] = useState<number>(
+    Number.isFinite(initialPlan.fapPerDay) ? initialPlan.fapPerDay : 1
+  );
+  const [fapGoalPerDay, setFapGoalPerDay] = useState<number>(
+    Number.isFinite(initialPlan.fapGoalPerDay) ? initialPlan.fapGoalPerDay : 0
+  );
 
   // Onboarding state
   const [usualCount, setUsualCount] = useState<number>(initialPlan.usualPerDay || 15);
@@ -53,14 +95,32 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   const [aiInput, setAiInput] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
 
+  // Walk the dynamic order rather than raw +1, so skipped steps stay skipped.
+  const moveStep = (direction: 1 | -1) => {
+    const index = order.indexOf(step);
+    const nextIndex = Math.min(order.length - 1, Math.max(0, index + direction));
+    setStep(order[nextIndex]);
+  };
+
   const nextStep = () => {
     Sound.tick();
-    setStep((s) => Math.min(totalSteps, s + 1));
+    moveStep(1);
   };
 
   const prevStep = () => {
     Sound.tick();
-    setStep((s) => Math.max(1, s - 1));
+    moveStep(-1);
+  };
+
+  const toggleTarget = (target: HabitTarget) => {
+    Sound.tick();
+    setTargets((prev) => {
+      if (prev.includes(target)) {
+        const next = prev.filter((t) => t !== target);
+        return next.length > 0 ? next : prev;
+      }
+      return [...prev, target];
+    });
   };
 
   const toggleTrigger = (id: string) => {
@@ -146,6 +206,15 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
       pastLongestStreakDays: longestStreak,
       triggers: triggers.length > 0 ? triggers : ['stress'],
       reasons: reasons.length > 0 ? reasons : ['health'],
+      targets,
+      habitChoiceMade: true,
+      fapStartDate: (() => {
+        const [year, month, day] = fapStartDate.split('-').map(Number);
+        const d = new Date(year, (month || 1) - 1, day || 1, 0, 0, 0, 0);
+        return isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
+      })(),
+      fapPerDay,
+      fapGoalPerDay,
       coachStyle,
       wakeTime,
       sleepTime,
@@ -178,7 +247,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             <span className="font-bold tracking-tight text-black dark:text-white">Unlit</span>
           )}
           <span>
-            Step {step} of {totalSteps}
+            Step {stepNumber} of {totalSteps}
           </span>
           {step > 5 && step < totalSteps ? (
             <button
@@ -198,7 +267,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             <div
               key={i}
               className={`flex-1 h-full rounded-full transition-colors ${
-                i + 1 <= step ? 'bg-black dark:bg-white' : 'bg-[#C4C4C4] dark:bg-[#3D3D3D]'
+                i + 1 <= stepNumber ? 'bg-black dark:bg-white' : 'bg-[#C4C4C4] dark:bg-[#3D3D3D]'
               }`}
             />
           ))}
@@ -217,8 +286,59 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
               Welcome to Unlit.
             </h2>
             <p className="text-sm text-[#5E5E5E] dark:text-[#A6A6A6]">
-              A free, private quit-smoking tracker that acts like a calm mentor and a careful doctor.
+              A free, private tracker for the habits you want to stop. Calm mentor, careful doctor,
+              no account and no tracking SDKs.
             </p>
+
+            {/* The first question: what is this actually about? */}
+            <div className="pt-1">
+              <label className="text-xs font-bold text-black dark:text-white block mb-2">
+                What are you trying to quit?
+              </label>
+              <div className="space-y-2">
+                {[
+                  {
+                    id: 'SMOKE' as HabitTarget,
+                    title: 'Smoking',
+                    desc: 'Cigarettes, vapes or shisha',
+                  },
+                  {
+                    id: 'FAP' as HabitTarget,
+                    title: 'Porn or fap',
+                    desc: 'Compulsive porn use or masturbation',
+                  },
+                  {
+                    id: 'BOTH' as const,
+                    title: 'Both',
+                    desc: 'Track both habits side by side',
+                  },
+                ].map((opt) => {
+                  const active =
+                    opt.id === 'BOTH'
+                      ? targets.includes('SMOKE') && targets.includes('FAP')
+                      : targets.includes(opt.id as HabitTarget);
+                  return (
+                    <button
+                      key={opt.id}
+                      onClick={() => {
+                        Sound.tick();
+                        if (opt.id === 'BOTH') setTargets(['SMOKE', 'FAP']);
+                        else toggleTarget(opt.id as HabitTarget);
+                      }}
+                      aria-pressed={active}
+                      className={`w-full p-3.5 rounded-2xl border text-left transition ${
+                        active
+                          ? 'bg-black text-white dark:bg-white dark:text-black border-transparent'
+                          : 'bg-[#F2F2F2] dark:bg-[#141414] border-[#C4C4C4] dark:border-[#3D3D3D] text-black dark:text-white'
+                      }`}
+                    >
+                      <span className="text-xs font-bold block">{opt.title}</span>
+                      <span className="text-[11px] opacity-75 block mt-0.5">{opt.desc}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
             <div className="p-3.5 rounded-2xl bg-[#F2F2F2] dark:bg-[#141414] border border-[#C4C4C4] dark:border-[#3D3D3D] text-xs space-y-1">
               <p className="font-bold text-black dark:text-white flex items-center gap-1.5">
                 <Shield className="w-4 h-4" />
@@ -826,6 +946,59 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           </div>
         )}
 
+        {/* STEP 16: PORN / FAP SETUP (only when that habit was chosen) */}
+        {step === 16 && (
+          <div className="space-y-4">
+            <h2 className="text-2xl font-bold tracking-tight">Porn & fap setup</h2>
+            <p className="text-xs text-[#5E5E5E] dark:text-[#A6A6A6]">{FAP_SETUP_NOTE}</p>
+
+            <div className="p-4 rounded-3xl bg-[#F2F2F2] dark:bg-[#141414] border border-[#C4C4C4] dark:border-[#3D3D3D] space-y-3 text-xs">
+              <div>
+                <label className="font-bold block mb-1.5">Clean streak starts</label>
+                <input
+                  type="date"
+                  value={fapStartDate}
+                  onChange={(e) => setFapStartDate(e.target.value)}
+                  className="w-full h-11 px-3 rounded-2xl bg-white dark:bg-[#262626] border border-[#C4C4C4] dark:border-[#3D3D3D] text-sm font-mono font-bold"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold block mb-1.5">Usual times / day</label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={fapPerDay}
+                    onChange={(e) => setFapPerDay(Math.max(0, Number(e.target.value)))}
+                    className="w-full h-11 px-3 rounded-2xl bg-white dark:bg-[#262626] border border-[#C4C4C4] dark:border-[#3D3D3D] text-sm font-mono font-bold"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold block mb-1.5">Daily target (0 = none)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={fapGoalPerDay}
+                    onChange={(e) => setFapGoalPerDay(Math.max(0, Number(e.target.value)))}
+                    className="w-full h-11 px-3 rounded-2xl bg-white dark:bg-[#262626] border border-[#C4C4C4] dark:border-[#3D3D3D] text-sm font-mono font-bold"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 rounded-3xl border border-[#C4C4C4] dark:border-[#3D3D3D] space-y-2">
+              <span className="text-xs font-bold block">Warning signs to watch</span>
+              {FAP_WARNINGS.slice(0, 4).map((warning) => (
+                <div key={warning.id}>
+                  <span className="text-[11px] font-bold block">{warning.title}</span>
+                  <p className="text-[11px] text-[#5E5E5E] dark:text-[#A6A6A6]">{warning.body}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* STEP 15: YOUR PLAN CARD */}
         {step === 15 && (
           <div className="space-y-4 animate-in fade-in duration-200">
@@ -846,6 +1019,22 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                   <span className="text-[#5E5E5E] dark:text-[#A6A6A6] block">Round 1 Target:</span>
                   <span className="font-bold">28 days smoke-free</span>
                 </div>
+              </div>
+
+              <div className="pb-2 border-b border-[#C4C4C4] dark:border-[#3D3D3D]">
+                <span className="text-[#5E5E5E] dark:text-[#A6A6A6] block">Tracking:</span>
+                <span className="font-bold">
+                  {targets.includes('SMOKE') && targets.includes('FAP')
+                    ? 'Smoking and porn/fap'
+                    : targets.includes('FAP')
+                      ? 'Porn/fap only'
+                      : 'Smoking only'}
+                </span>
+                {targets.includes('FAP') && (
+                  <p className="text-[11px] text-[#5E5E5E] dark:text-[#A6A6A6] mt-1">
+                    Fap-free timer from {fapStartDate} · target {fapGoalPerDay === 0 ? 'no slips' : `${fapGoalPerDay}/day`}
+                  </p>
+                )}
               </div>
 
               <div>
@@ -883,7 +1072,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
 
             <div className="flex gap-2 pt-2">
               <button
-                onClick={() => setStep(2)}
+                onClick={() => setStep(order[1] ?? 1)}
                 className="flex-1 h-12 rounded-full border border-[#C4C4C4] dark:border-[#3D3D3D] text-xs font-semibold"
               >
                 Edit

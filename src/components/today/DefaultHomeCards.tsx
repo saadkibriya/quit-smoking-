@@ -48,8 +48,12 @@ export const DefaultHomeCards: React.FC<DefaultHomeCardsProps> = ({
   const [now, setNow] = useState(() => Date.now());
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Cards show days/hours, so a 1s tick only re-rendered the whole deck for
+  // nothing. Ten seconds, and no work while the app is backgrounded.
   useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), 1000);
+    const timer = setInterval(() => {
+      if (document.visibilityState === 'visible') setNow(Date.now());
+    }, 10000);
     return () => clearInterval(timer);
   }, []);
 

@@ -1,4 +1,4 @@
-import { Entry, UserPlan, QuitAttempt, EarnedBadge, ToolStat, ChatMessage, OtherHabit, HomeLayoutItem, HomeCardId } from '../types';
+import { Entry, UserPlan, QuitAttempt, EarnedBadge, ToolStat, ChatMessage, OtherHabit, HomeLayoutItem, HomeCardId, HabitTarget } from '../types';
 import { generateDemoData } from '../domain/demoData';
 
 const STORAGE_KEYS = {
@@ -85,7 +85,11 @@ export const ALL_HOME_CARDS: CardMeta[] = [
 
 export const DEFAULT_PLAN: UserPlan = {
   mode: 'QUIT',
+  targets: ['SMOKE'],
   quitStartDate: new Date().toISOString(),
+  fapStartDate: new Date().toISOString(),
+  fapPerDay: 1,
+  fapGoalPerDay: 0,
   usualPerDay: 15,
   cigarettesPerPack: 20,
   packPrice: 10,
@@ -213,9 +217,19 @@ export const Storage = {
       const savedLayout: HomeLayoutItem[] =
         parsed.homeLayout && parsed.homeLayout.length > 0 ? parsed.homeLayout : DEFAULT_HOME_LAYOUT;
 
+      // Older saves predate the habit picker; they were smoking-only.
+      const targets: HabitTarget[] =
+        Array.isArray(parsed.targets) && parsed.targets.length > 0
+          ? parsed.targets.filter((t: unknown) => t === 'SMOKE' || t === 'FAP')
+          : ['SMOKE'];
+
       return {
         ...DEFAULT_PLAN,
         ...parsed,
+        targets: targets.length > 0 ? targets : ['SMOKE'],
+        fapStartDate: parsed.fapStartDate || DEFAULT_PLAN.fapStartDate,
+        fapPerDay: Number.isFinite(Number(parsed.fapPerDay)) ? Number(parsed.fapPerDay) : 1,
+        fapGoalPerDay: Number.isFinite(Number(parsed.fapGoalPerDay)) ? Number(parsed.fapGoalPerDay) : 0,
         layoutVersion: Math.max(layoutVersion, HOME_LAYOUT_VERSION),
         homeLayout: migrateHomeLayout(savedLayout, layoutVersion),
       };

@@ -621,6 +621,20 @@ export const JourneyTab: React.FC<JourneyTabProps> = ({
               const d = new Date(e.timestamp);
               const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
               const dateLabel = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+              const meta =
+                e.type === 'CIGARETTE'
+                  ? { icon: '🚬', label: 'Cigarette Logged', tone: 'outline' as const }
+                  : e.type === 'CRAVING_BEATEN'
+                    ? {
+                        icon: '✓',
+                        label: `Craving Beaten (${e.cravingDurationSeconds || 180}s)`,
+                        tone: 'solid' as const,
+                      }
+                    : e.type === 'FAP'
+                      ? { icon: '•', label: 'Porn / fap slip logged', tone: 'outline' as const }
+                      : e.type === 'FAP_URGE_BEATEN'
+                        ? { icon: '✓', label: 'Urge ridden out (porn / fap)', tone: 'solid' as const }
+                        : { icon: '★', label: 'Daily Pledge', tone: 'muted' as const };
 
               return (
                 <div
@@ -631,23 +645,17 @@ export const JourneyTab: React.FC<JourneyTabProps> = ({
                   <div className="flex items-center gap-2.5">
                     <span
                       className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-[10px] ${
-                        e.type === 'CIGARETTE'
+                        meta.tone === 'outline'
                           ? 'border border-black dark:border-white text-black dark:text-white'
-                          : e.type === 'CRAVING_BEATEN'
-                          ? 'bg-black text-white dark:bg-white dark:text-black'
-                          : 'bg-[#C4C4C4] dark:bg-[#3D3D3D]'
+                          : meta.tone === 'solid'
+                            ? 'bg-black text-white dark:bg-white dark:text-black'
+                            : 'bg-[#C4C4C4] dark:bg-[#3D3D3D]'
                       }`}
                     >
-                      {e.type === 'CIGARETTE' ? '🚬' : e.type === 'CRAVING_BEATEN' ? '✓' : '★'}
+                      {meta.icon}
                     </span>
                     <div>
-                      <span className="font-bold text-black dark:text-white block">
-                        {e.type === 'CIGARETTE'
-                          ? 'Cigarette Logged'
-                          : e.type === 'CRAVING_BEATEN'
-                          ? `Craving Beaten (${e.cravingDurationSeconds || 180}s)`
-                          : 'Daily Pledge'}
-                      </span>
+                      <span className="font-bold text-black dark:text-white block">{meta.label}</span>
                       <span className="text-[11px] text-[#5E5E5E] dark:text-[#A6A6A6]">
                         {dateLabel} · {timeStr}
                         {e.triggers && e.triggers.length > 0 ? ` · ${e.triggers.join(', ')}` : ''}

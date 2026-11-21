@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { UserPlan, Entry, ChatMessage, OtherHabit } from '../../types';
+import { UserPlan, Entry, ChatMessage, OtherHabit, HabitTarget } from '../../types';
+import { FAP_WARNINGS } from '../../content/fapGuidance';
+import { getFapStats, formatCleanTime } from '../../domain/fap';
 import { Sound } from '../../data/sound';
 import { Storage } from '../../data/storage';
 import { WHO_MEDICINES, DOCTOR_SAFETY_CHECKLIST, RED_FLAG_CRISIS_ALERTS, DISCLAIMER_FOOTER } from '../../content/doctorContent';
@@ -316,6 +318,148 @@ export const ToolkitTab: React.FC<ToolkitTabProps> = ({
           ))}
         </div>
       </div>
+
+      {/* 1b. Tracked habits (smoking / porn-fap) */}
+      {(() => {
+        const targets: HabitTarget[] =
+          plan.targets && plan.targets.length > 0 ? plan.targets : ['SMOKE'];
+        const tracksFap = targets.includes('FAP');
+        const fapStats = tracksFap ? getFapStats(entries, plan.fapStartDate) : null;
+
+        const setTargets = (next: HabitTarget[]) => {
+          if (next.length === 0) return;
+          onUpdatePlan({ ...plan, targets: next });
+        };
+
+        const toggle = (target: HabitTarget) => {
+          Sound.tick();
+          setTargets(
+            targets.includes(target)
+              ? targets.filter((t) => t !== target)
+              : [...targets, target]
+          );
+        };
+
+        return (
+          <section className="space-y-2">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[#5E5E5E] dark:text-[#A6A6A6] px-1">
+              Tracked habits
+            </h3>
+
+            <div className="rounded-3xl bg-[#F2F2F2] dark:bg-[#141414] border border-[#C4C4C4] dark:border-[#3D3D3D] overflow-hidden divide-y divide-[#C4C4C4] dark:divide-[#3D3D3D]">
+              {[
+                { id: 'SMOKE' as HabitTarget, title: 'Smoking', desc: 'Cigarettes, vapes, shisha' },
+                { id: 'FAP' as HabitTarget, title: 'Porn / fap', desc: 'Compulsive porn use or masturbation' },
+              ].map((habit) => {
+                const active = targets.includes(habit.id);
+                return (
+                  <button
+                    key={habit.id}
+                    onClick={() => toggle(habit.id)}
+                    aria-pressed={active}
+                    className="w-full p-4 flex items-center justify-between text-left hover:bg-[#E2E2E2] dark:hover:bg-[#262626] transition"
+                  >
+                    <div>
+                      <span className="text-xs font-bold text-black dark:text-white block">
+                        {habit.title}
+                      </span>
+                      <span className="text-[11px] text-[#5E5E5E] dark:text-[#A6A6A6]">
+                        {habit.desc}
+                      </span>
+                    </div>
+                    <span
+                      className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${
+                        active
+                          ? 'bg-black text-white dark:bg-white dark:text-black'
+                          : 'border border-[#C4C4C4] dark:border-[#3D3D3D] text-[#5E5E5E] dark:text-[#A6A6A6]'
+                      }`}
+                    >
+                      {active ? 'Tracking' : 'Off'}
+                    </span>
+                  </button>
+                );
+              })}
+
+              {tracksFap && fapStats && (
+                <div className="p-4 space-y-3 text-xs">
+                  <div className="flex items-end justify-between">
+                    <div>
+                      <span className="text-[#5E5E5E] dark:text-[#A6A6A6] block">Clean streak</span>
+                      <span className="text-2xl font-black tabular-nums">
+                        {formatCleanTime(fapStats)}
+                      </span>
+                    </div>
+                    <span className="text-[11px] text-[#5E5E5E] dark:text-[#A6A6A6]">
+                      {fapStats.todayLapses} today · {fapStats.weekLapses} this week
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="font-bold block mb-1">Streak starts</label>
+                      <input
+                        type="date"
+                        value={new Date(plan.fapStartDate).toISOString().slice(0, 10)}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          if (!value) return;
+                          const [y, m, d] = value.split('-').map(Number);
+                          const date = new Date(y, (m || 1) - 1, d || 1, 0, 0, 0, 0);
+                          if (isNaN(date.getTime())) return;
+                          onUpdatePlan({ ...plan, fapStartDate: date.toISOString() });
+                        }}
+                        className="w-full h-10 px-2.5 rounded-xl bg-white dark:bg-[#262626] border border-[#C4C4C4] dark:border-[#3D3D3D] font-mono font-bold"
+                      />
+                    </div>
+                    <div>
+                      <label className="font-bold block mb-1">Target / day</label>
+                      <input
+                        type="number"
+                        min={0}
+                        value={plan.fapGoalPerDay}
+                        onChange={(e) =>
+                          onUpdatePlan({ ...plan, fapGoalPerDay: Math.max(0, Number(e.target.value)) })
+                        }
+                        className="w-full h-10 px-2.5 rounded-xl bg-white dark:bg-[#262626] border border-[#C4C4C4] dark:border-[#3D3D3D] font-mono font-bold"
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => toggleSection('fap_warnings')}
+                    className="w-full flex items-center justify-between pt-1 text-left"
+                  >
+                    <span className="font-bold">Warning signs & when to get help</span>
+                    <ChevronDown
+                      className={`w-4 h-4 text-[#5E5E5E] dark:text-[#A6A6A6] transition-transform ${
+                        activeSection === 'fap_warnings' ? 'rotate-180' : ''
+                      }`}
+                    />
+                  </button>
+
+                  {activeSection === 'fap_warnings' && (
+                    <div className="space-y-2 pt-1">
+                      {FAP_WARNINGS.map((warning) => (
+                        <div
+                          key={warning.id}
+                          className="p-3 rounded-2xl bg-white dark:bg-[#000000] border border-[#C4C4C4] dark:border-[#3D3D3D]"
+                        >
+                          <span className="text-[11px] font-bold block text-black dark:text-white">
+                            {warning.title}
+                          </span>
+                          <p className="text-[11px] text-[#5E5E5E] dark:text-[#A6A6A6]">
+                            {warning.body}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </section>
+        );
+      })()}
 
       {/* 2. HELP NOW Group */}
       <section className="space-y-2">

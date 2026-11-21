@@ -109,7 +109,11 @@ export function generateDemoData(): {
 
   const plan: UserPlan = {
     mode: 'QUIT',
+    targets: ['SMOKE'],
     quitStartDate,
+    fapStartDate: quitStartDate,
+    fapPerDay: 1,
+    fapGoalPerDay: 0,
     usualPerDay: 15,
     cigarettesPerPack: 20,
     packPrice: 12.5,

@@ -92,21 +92,21 @@ export const CustomizeHomeDrawer: React.FC<CustomizeHomeDrawerProps> = ({
       aria-label="Customize Home"
       className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200"
     >
-      <div className="w-full max-w-lg bg-[#000000] text-white border-t sm:border border-[#2A2A2A] rounded-t-3xl sm:rounded-3xl p-5 sm:p-6 shadow-2xl max-h-[90vh] flex flex-col">
+      <div className="w-full max-w-lg bg-[#FFFFFF] dark:bg-[#000000] text-black dark:text-white border-t sm:border border-[#C4C4C4] dark:border-[#2A2A2A] rounded-t-3xl sm:rounded-3xl p-5 sm:p-6 shadow-2xl max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-[#2A2A2A] mb-4 shrink-0">
+        <div className="flex items-center justify-between pb-3 border-b border-[#C4C4C4] dark:border-[#2A2A2A] mb-4 shrink-0">
           <div>
             <h3 className="text-base font-extrabold tracking-tight">Customize home</h3>
-            <p className="text-[11px] text-[#8A8A8A]">
+            <p className="text-[11px] text-[#5E5E5E] dark:text-[#A6A6A6]">
               Choose which cards appear on your main dashboard
             </p>
           </div>
           <button
             onClick={onClose}
             aria-label="Close customizer"
-            className="w-8 h-8 rounded-full border border-[#2A2A2A] flex items-center justify-center hover:bg-[#141414] active:scale-95 transition"
+            className="w-8 h-8 rounded-full border border-[#C4C4C4] dark:border-[#2A2A2A] flex items-center justify-center hover:bg-[#E2E2E2] dark:hover:bg-[#F2F2F2] dark:bg-[#141414] active:scale-95 transition"
           >
-            <X className="w-4 h-4 text-white" />
+            <X className="w-4 h-4 text-black dark:text-white" />
           </button>
         </div>
 
@@ -115,10 +115,10 @@ export const CustomizeHomeDrawer: React.FC<CustomizeHomeDrawerProps> = ({
           {/* Section 1: On your home */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-mono font-bold tracking-wider uppercase text-[#8A8A8A]">
+              <span className="text-xs font-mono font-bold tracking-wider uppercase text-[#5E5E5E] dark:text-[#A6A6A6]">
                 On your home ({currentVisibleCards.length})
               </span>
-              <span className="text-[10px] text-[#8A8A8A]">Tap size to toggle</span>
+              <span className="text-[10px] text-[#5E5E5E] dark:text-[#A6A6A6]">Tap size to toggle</span>
             </div>
 
             <div className="space-y-1.5">
@@ -129,15 +129,15 @@ export const CustomizeHomeDrawer: React.FC<CustomizeHomeDrawerProps> = ({
                 return (
                   <div
                     key={item.cardId}
-                    className="p-3 rounded-2xl bg-[#141414] border border-[#2A2A2A] flex items-center justify-between text-xs transition"
+                    className="p-3 rounded-2xl bg-[#F2F2F2] dark:bg-[#141414] border border-[#C4C4C4] dark:border-[#2A2A2A] flex items-center justify-between text-xs transition"
                   >
                     <div className="flex items-center gap-2.5">
-                      <GripVertical className="w-4 h-4 text-[#8A8A8A] shrink-0" />
+                      <GripVertical className="w-4 h-4 text-[#5E5E5E] dark:text-[#A6A6A6] shrink-0" />
                       <div>
-                        <span className="font-bold text-white block">
+                        <span className="font-bold text-black dark:text-white block">
                           {cardMeta?.label || item.cardId}
                         </span>
-                        <span className="text-[10px] text-[#8A8A8A]">
+                        <span className="text-[10px] text-[#5E5E5E] dark:text-[#A6A6A6]">
                           Size: {item.size === 'S' ? 'Small (1 col)' : item.size === 'W' ? 'Wide (2 cols)' : 'Large (2×2)'}
                         </span>
                       </div>
@@ -147,7 +147,7 @@ export const CustomizeHomeDrawer: React.FC<CustomizeHomeDrawerProps> = ({
                       {/* Cycle size button */}
                       <button
                         onClick={() => handleCycleSize(item.cardId)}
-                        className="px-2 py-1 rounded-lg border border-[#3D3D3D] text-[10px] font-mono font-bold text-white hover:bg-[#262626]"
+                        className="px-2 py-1 rounded-lg border border-[#C4C4C4] dark:border-[#3D3D3D] text-[10px] font-mono font-bold text-black dark:text-white hover:bg-[#E2E2E2] dark:hover:bg-[#262626]"
                         title="Toggle size (S/W/L)"
                       >
                         {item.size}
@@ -157,7 +157,7 @@ export const CustomizeHomeDrawer: React.FC<CustomizeHomeDrawerProps> = ({
                       <button
                         disabled={index === 0}
                         onClick={() => handleMove(index, 'UP')}
-                        className="p-1.5 rounded-lg border border-[#2A2A2A] text-white hover:bg-[#262626] disabled:opacity-20"
+                        className="p-1.5 rounded-lg border border-[#C4C4C4] dark:border-[#2A2A2A] text-black dark:text-white hover:bg-[#E2E2E2] dark:hover:bg-[#262626] disabled:opacity-20"
                         title="Move up"
                       >
                         <ArrowUp className="w-3.5 h-3.5" />
@@ -167,7 +167,7 @@ export const CustomizeHomeDrawer: React.FC<CustomizeHomeDrawerProps> = ({
                       <button
                         disabled={index === layout.length - 1}
                         onClick={() => handleMove(index, 'DOWN')}
-                        className="p-1.5 rounded-lg border border-[#2A2A2A] text-white hover:bg-[#262626] disabled:opacity-20"
+                        className="p-1.5 rounded-lg border border-[#C4C4C4] dark:border-[#2A2A2A] text-black dark:text-white hover:bg-[#E2E2E2] dark:hover:bg-[#262626] disabled:opacity-20"
                         title="Move down"
                       >
                         <ArrowDown className="w-3.5 h-3.5" />
@@ -177,13 +177,13 @@ export const CustomizeHomeDrawer: React.FC<CustomizeHomeDrawerProps> = ({
                       {!isPermanent ? (
                         <button
                           onClick={() => handleHide(item.cardId)}
-                          className="p-1.5 rounded-lg border border-[#2A2A2A] text-[#8A8A8A] hover:text-[#D71921] hover:border-[#D71921]"
+                          className="p-1.5 rounded-lg border border-[#C4C4C4] dark:border-[#2A2A2A] text-[#5E5E5E] dark:text-[#A6A6A6] hover:text-[#D71921] hover:border-[#D71921]"
                           title="Hide card"
                         >
                           <X className="w-3.5 h-3.5" />
                         </button>
                       ) : (
-                        <span className="w-7 text-center text-[10px] text-[#8A8A8A]">fixed</span>
+                        <span className="w-7 text-center text-[10px] text-[#5E5E5E] dark:text-[#A6A6A6]">fixed</span>
                       )}
                     </div>
                   </div>
@@ -193,13 +193,13 @@ export const CustomizeHomeDrawer: React.FC<CustomizeHomeDrawerProps> = ({
           </div>
 
           {/* Section 2: Add a card */}
-          <div className="pt-3 border-t border-[#2A2A2A]">
-            <span className="text-xs font-mono font-bold tracking-wider uppercase text-[#8A8A8A] block mb-2">
+          <div className="pt-3 border-t border-[#C4C4C4] dark:border-[#2A2A2A]">
+            <span className="text-xs font-mono font-bold tracking-wider uppercase text-[#5E5E5E] dark:text-[#A6A6A6] block mb-2">
               Add a card ({availableToAdd.length})
             </span>
 
             {availableToAdd.length === 0 ? (
-              <p className="text-xs text-[#8A8A8A] italic">
+              <p className="text-xs text-[#5E5E5E] dark:text-[#A6A6A6] italic">
                 All available cards are currently on your home screen.
               </p>
             ) : (
@@ -207,18 +207,18 @@ export const CustomizeHomeDrawer: React.FC<CustomizeHomeDrawerProps> = ({
                 {availableToAdd.map((card) => (
                   <div
                     key={card.id}
-                    className="p-3 rounded-2xl bg-[#141414] border border-[#2A2A2A] flex items-center justify-between text-xs"
+                    className="p-3 rounded-2xl bg-[#F2F2F2] dark:bg-[#141414] border border-[#C4C4C4] dark:border-[#2A2A2A] flex items-center justify-between text-xs"
                   >
                     <div className="pr-2">
-                      <span className="font-bold text-white block">{card.label}</span>
-                      <span className="text-[11px] text-[#8A8A8A]">{card.description}</span>
+                      <span className="font-bold text-black dark:text-white block">{card.label}</span>
+                      <span className="text-[11px] text-[#5E5E5E] dark:text-[#A6A6A6]">{card.description}</span>
                     </div>
 
                     <button
                       onClick={() => handleAdd(card.id, card.defaultSize)}
-                      className="h-8 px-3 rounded-xl bg-white text-black font-bold text-xs flex items-center gap-1 shrink-0 active:scale-95 transition"
+                      className="h-8 px-3 rounded-xl bg-black dark:bg-white text-white dark:text-black font-bold text-xs flex items-center gap-1 shrink-0 active:scale-95 transition"
                     >
-                      <Plus className="w-3.5 h-3.5 text-black" />
+                      <Plus className="w-3.5 h-3.5 text-white dark:text-black" />
                       <span>Add</span>
                     </button>
                   </div>
@@ -229,10 +229,10 @@ export const CustomizeHomeDrawer: React.FC<CustomizeHomeDrawerProps> = ({
         </div>
 
         {/* Footer: Reset to simple layout */}
-        <div className="pt-4 border-t border-[#2A2A2A] mt-4 flex items-center justify-between shrink-0">
+        <div className="pt-4 border-t border-[#C4C4C4] dark:border-[#2A2A2A] mt-4 flex items-center justify-between shrink-0">
           {showConfirmReset ? (
             <div className="flex items-center justify-between w-full gap-2">
-              <span className="text-xs text-[#8A8A8A]">Reset to simple 4-card layout?</span>
+              <span className="text-xs text-[#5E5E5E] dark:text-[#A6A6A6]">Reset to simple 4-card layout?</span>
               <div className="flex gap-2">
                 <button
                   onClick={() => {
@@ -242,13 +242,13 @@ export const CustomizeHomeDrawer: React.FC<CustomizeHomeDrawerProps> = ({
                     setLayout(DEFAULT_HOME_LAYOUT);
                     onClose();
                   }}
-                  className="h-9 px-3 rounded-xl bg-white text-black font-bold text-xs"
+                  className="h-9 px-3 rounded-xl bg-black dark:bg-white text-white dark:text-black font-bold text-xs"
                 >
                   Yes, reset
                 </button>
                 <button
                   onClick={() => setShowConfirmReset(false)}
-                  className="h-9 px-3 rounded-xl border border-[#3D3D3D] text-xs font-semibold"
+                  className="h-9 px-3 rounded-xl border border-[#C4C4C4] dark:border-[#3D3D3D] text-xs font-semibold"
                 >
                   Cancel
                 </button>
@@ -258,13 +258,13 @@ export const CustomizeHomeDrawer: React.FC<CustomizeHomeDrawerProps> = ({
             <>
               <button
                 onClick={() => setShowConfirmReset(true)}
-                className="text-xs text-[#8A8A8A] underline hover:text-white"
+                className="text-xs text-[#5E5E5E] dark:text-[#A6A6A6] underline hover:text-black dark:text-white"
               >
                 Reset to simple layout
               </button>
               <button
                 onClick={onClose}
-                className="h-10 px-5 rounded-full bg-white text-black font-bold text-xs active:scale-95 transition"
+                className="h-10 px-5 rounded-full bg-black dark:bg-white text-white dark:text-black font-bold text-xs active:scale-95 transition"
               >
                 Done
               </button>

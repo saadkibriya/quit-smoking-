@@ -62,6 +62,8 @@ export const DOCTOR_SAFETY_CHECKLIST = [
 
 export const RED_FLAG_CRISIS_ALERTS = [
   'Severe persistent low mood or thoughts of self-harm or suicide (Call emergency services or reach out to a trusted person immediately).',
+  'Porn or fap use that feels out of control, costs you work, money or relationships, or leaves you feeling worthless — this is common and treatable; ask a doctor or therapist for help.',
+  'Any sexual behaviour that involves minors, coercion or non-consenting people. Stop and seek professional help immediately.',
   'Unexplained acute chest pain or tightness radiating to arm or jaw.',
   'Coughing up blood or persistent blood in sputum.',
   'Severe shortness of breath that does not ease with rest.',

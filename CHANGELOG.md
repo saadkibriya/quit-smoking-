@@ -2,6 +2,34 @@
 
 All notable changes to Unlit are documented here per `infos.md` (Worker Rules) and `roadmap.md`.
 
+## [2026-11-21] — Second habit (porn/fap), theme and lag fixes
+
+### Added
+- **Porn/fap tracking alongside smoking.** Onboarding now opens with "What are you trying to
+  quit?" — smoking, porn/fap, or both — and the step order adapts, so a fap-only user never
+  answers cigarette pricing. A fap setup step records the clean-streak start date, usual
+  frequency and a daily target.
+- **Fap dashboard card** with a clean-streak timer, today / 7-day slip counts, urges ridden
+  out, a slip log with the same 2-minute undo, and an urge button that reuses the craving
+  tools. Fap-only users get a dedicated home instead of a dashboard full of zeroes.
+- **Settings → Tracked habits** to switch either tracker on or off, edit the fap start date
+  and target, and read the full warning list.
+- **Warnings that match the habit:** seven non-judgemental signs (compulsion, escalation,
+  secrecy/shame, sleep, time lost, body signals, when to get help), shown in onboarding,
+  settings and the fap home, plus two porn/fap entries in the doctor's red-flag alerts and a
+  truthful "I slipped" label in the urge screen.
+
+### Fixed
+- **Home now follows the theme.** Night mode used to leave the whole dashboard white while the
+  rest of the app was black; the home palette is tokenised and overridden in dark mode, and
+  the chips/primary buttons read from tokens instead of hardcoded white.
+- **Customize-home sheet was always black**, even in day theme. It is now light in day mode and
+  dark in night mode like every other sheet.
+- **Lag on the home screen and card deck:** both ran a 1-second timer that re-rendered every
+  card (and recomputed stats) every tick while showing only days and hours. They now tick
+  every 10s, skip work while the app is in the background, memoise the derived stats, and the
+  frosted-glass blur dropped from 16px to 10px.
+
 ## [2026-11-21] — Two more widgets: savings and not smoked
 
 ### Added

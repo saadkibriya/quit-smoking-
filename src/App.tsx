@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { UserPlan, Entry, QuitAttempt, EarnedBadge, ToolStat, ChatMessage, HomeLayoutItem } from './types';
+import { UserPlan, Entry, QuitAttempt, EarnedBadge, ToolStat, ChatMessage, HomeLayoutItem, HabitTarget } from './types';
 import { Storage, DEFAULT_PLAN, DEFAULT_HOME_LAYOUT, subscribeStorage } from './data/storage';
 import { Sound } from './data/sound';
 import { TopBar } from './components/TopBar';
@@ -19,6 +19,7 @@ import { HomeScreenWidgetSimulator } from './components/widgets/HomeScreenWidget
 import { MilestoneBurst } from './components/celebration/MilestoneBurst';
 import { EntryDetailsSheet } from './components/today/EntryDetailsSheet';
 import { HomeScreen } from './components/home/HomeScreen';
+import { FapCard, FapHome } from './components/fap/FapCard';
 import './components/home/home.css';
 import { calculateCurrentStreak, calculateSmokeFreeDays, calculateRoundStatus } from './domain/calculations';
 import { syncWidget } from './widgetSync';
@@ -39,6 +40,11 @@ export default function App() {
   const [showSosModal, setShowSosModal] = useState(false);
   const [showSlipSheet, setShowSlipSheet] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(() => !plan.onboardingCompleted);
+  // People who finished onboarding before habit tracking existed get asked once.
+  const [showHabitPrompt, setShowHabitPrompt] = useState(() => {
+    const saved = Storage.getPlan();
+    return saved.onboardingCompleted && !saved.habitChoiceMade;
+  });
   const [showWidgetSimulator, setShowWidgetSimulator] = useState(false);
   const [showCustomizeHome, setShowCustomizeHome] = useState(false);
   const [showLogSheet, setShowLogSheet] = useState(false);
@@ -46,6 +52,7 @@ export default function App() {
   // 2-Minute Undo snackbar state (120 seconds duration)
   const [undoEntryId, setUndoEntryId] = useState<string | null>(null);
   const [undoCountdown, setUndoCountdown] = useState(120);
+  const [undoKind, setUndoKind] = useState<'SMOKE' | 'FAP'>('SMOKE');
   const [entryForDetails, setEntryForDetails] = useState<Entry | null>(null);
 
   // Milestone celebration burst
@@ -127,7 +134,17 @@ export default function App() {
     }
   };
 
+  const [sosHabit, setSosHabit] = useState<'SMOKE' | 'FAP'>('SMOKE');
+
   const handleOpenSosModal = () => {
+    setSosHabit(tracksFap && !tracksSmoke ? 'FAP' : 'SMOKE');
+    window.location.hash = 'craving';
+    setShowSosModal(true);
+  };
+
+  // Same urge-riding tools, but the win is counted against the fap tracker.
+  const handleOpenFapUrge = () => {
+    setSosHabit('FAP');
     window.location.hash = 'craving';
     setShowSosModal(true);
   };
@@ -203,6 +220,12 @@ export default function App() {
     }
   }, [entries, plan.quitStartDate, badges]);
 
+  // Which habits this person chose during onboarding. Older saves have none.
+  const targets = plan.targets && plan.targets.length > 0 ? plan.targets : ['SMOKE'];
+  const tracksSmoke = targets.includes('SMOKE');
+  const tracksFap = targets.includes('FAP');
+  const fapOnly = tracksFap && !tracksSmoke;
+
   // Handle logging a cigarette ("I smoked")
   const handleLogCigarette = (extraData?: Partial<Entry>) => {
     const newEntry: Entry = {
@@ -216,6 +239,7 @@ export default function App() {
     };
 
     Storage.addEntry(newEntry);
+    setUndoKind('SMOKE');
     setUndoEntryId(newEntry.id);
     setUndoCountdown(120); // 2-minute undo per spec
 
@@ -227,6 +251,38 @@ export default function App() {
         setShowSlipSheet(true);
       }, 400);
     }
+  };
+
+  // Log one porn/fap slip. Same 2-minute undo as smoking, no shame machinery.
+  const handleLogFap = () => {
+    const entry: Entry = {
+      id: `fap_${Date.now()}`,
+      timestamp: Date.now(),
+      timezoneOffset: new Date().getTimezoneOffset(),
+      type: 'FAP',
+      habitId: 'fap',
+      source: 'app',
+    };
+    Storage.addEntry(entry);
+    setUndoKind('FAP');
+    setUndoEntryId(entry.id);
+    setUndoCountdown(120);
+  };
+
+  // An urge that was ridden out is a win even when the timer later restarts.
+  const handleFapUrgeBeaten = () => {
+    const entry: Entry = {
+      id: `fap_urge_${Date.now()}`,
+      timestamp: Date.now(),
+      timezoneOffset: new Date().getTimezoneOffset(),
+      type: 'FAP_URGE_BEATEN',
+      habitId: 'fap',
+      source: 'app',
+    };
+    Storage.addEntry(entry);
+    const count = entries.filter((e) => !e.undone && e.type === 'FAP_URGE_BEATEN').length + 1;
+    setCelebrationMessage(`That's ${count} urges ridden out`);
+    setCelebrationActive(true);
   };
 
   // Daily identity vote: one tap, one entry, no streak to break
@@ -283,8 +339,9 @@ export default function App() {
   const smokeFree = calculateSmokeFreeDays(entries, plan.quitStartDate);
   const round = calculateRoundStatus(streak.streakHours, smokeFree.completedSmokeFreeDays, entries);
 
-  const dayGreeting =
-    plan.mode === 'QUIT'
+  const dayGreeting = !tracksSmoke
+    ? 'Porn / fap tracking'
+    : plan.mode === 'QUIT'
       ? `Day ${smokeFree.completedSmokeFreeDays + 1} · ${round.currentRoundName}`
       : plan.mode === 'CUT_DOWN'
       ? 'Cut-Down Mode'
@@ -306,7 +363,7 @@ export default function App() {
       {/* Main App Frame */}
       <div className="w-full max-w-2xl min-h-screen flex flex-col relative bg-[#FFFFFF] dark:bg-[#000000] border-x-0 sm:border-x border-[#C4C4C4] dark:border-[#2A2A2A]">
         {/* Top App Bar with Launcher & Widgets switch. The redesigned home carries its own bar. */}
-        {!(activeTab === 'today' && plan.mode === 'QUIT') && (
+        {!(activeTab === 'today' && (plan.mode === 'QUIT' || fapOnly)) && (
           <TopBar
             plan={plan}
             currentTheme={resolvedTheme}
@@ -319,7 +376,7 @@ export default function App() {
 
         {/* Tab Content */}
         <main className="flex-1 w-full">
-          {activeTab === 'today' && plan.mode === 'QUIT' && (
+          {activeTab === 'today' && plan.mode === 'QUIT' && !fapOnly && (
             <HomeScreen
               plan={plan}
               entries={entries}
@@ -332,6 +389,20 @@ export default function App() {
               onOpenLogSheet={() => setShowLogSheet(true)}
               onPledge={handlePledge}
               onLogCigarette={() => handleLogCigarette()}
+              onOpenSettings={() => setActiveTab('toolkit')}
+              showFap={tracksFap}
+              onLogFap={handleLogFap}
+              onOpenFapUrge={handleOpenFapUrge}
+            />
+          )}
+
+          {/* Fap-only home: the smoking dashboard would all be zeroes for them. */}
+          {activeTab === 'today' && fapOnly && (
+            <FapHome
+              plan={plan}
+              entries={entries}
+              onLogSlip={handleLogFap}
+              onOpenUrgeHelp={handleOpenFapUrge}
               onOpenSettings={() => setActiveTab('toolkit')}
             />
           )}
@@ -410,10 +481,12 @@ export default function App() {
           <div className="fixed bottom-20 left-4 right-4 max-w-md mx-auto z-50 bg-[#000000] text-white border border-[#3D3D3D] rounded-3xl p-4 shadow-2xl flex items-center justify-between animate-in slide-in-from-bottom duration-150">
             <div className="pr-2">
               <span className="text-xs font-bold block text-white">
-                Logged. Your timer restarted.
+                {undoKind === 'FAP' ? 'Slip logged. Timer restarted.' : 'Logged. Your timer restarted.'}
               </span>
               <span className="text-[11px] text-[#8A8A8A] block mt-0.5">
-                You still have {smokeFree.completedSmokeFreeDays} smoke-free days behind you. ({undoMins}:{undoSecs})
+                {undoKind === 'FAP'
+                  ? `Nothing before this is erased. (${undoMins}:${undoSecs})`
+                  : `You still have ${smokeFree.completedSmokeFreeDays} smoke-free days behind you. (${undoMins}:${undoSecs})`}
               </span>
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
@@ -475,14 +548,17 @@ export default function App() {
       {showSosModal && (
         <CravingSosModal
           plan={plan}
+          habit={sosHabit}
           toolStats={toolStats}
           onClose={handleCloseSosModal}
           onCravingBeaten={(duration, tool) => {
-            handleCravingBeaten(duration, tool);
+            if (sosHabit === 'FAP') handleFapUrgeBeaten();
+            else handleCravingBeaten(duration, tool);
             handleCloseSosModal();
           }}
           onSmokedDuringCraving={() => {
-            handleLogCigarette();
+            if (sosHabit === 'FAP') handleLogFap();
+            else handleLogCigarette();
             handleCloseSosModal();
           }}
           onRecordToolFeedback={handleToolFeedback}
@@ -545,6 +621,38 @@ export default function App() {
             handleOpenSosModal();
           }}
         />
+      )}
+
+      {/* One-time habit question for people who onboarded before it existed */}
+      {showHabitPrompt && !showOnboarding && (
+        <div className="fixed inset-0 z-[60] bg-black/70 flex items-end sm:items-center justify-center p-4">
+          <div className="w-full max-w-md rounded-3xl bg-[#FFFFFF] dark:bg-[#0A0A0A] text-black dark:text-white border border-[#C4C4C4] dark:border-[#2A2A2A] p-5 space-y-3">
+            <h2 className="text-xl font-black tracking-tight">What are you trying to quit?</h2>
+            <p className="text-xs text-[#5E5E5E] dark:text-[#A6A6A6]">
+              Unlit now tracks smoking and porn/fap separately. Pick what applies; you can
+              change it any time in Settings.
+            </p>
+            {[
+              { label: 'Smoking', targets: ['SMOKE'] as HabitTarget[], desc: 'Cigarettes, vapes, shisha' },
+              { label: 'Porn or fap', targets: ['FAP'] as HabitTarget[], desc: 'Compulsive porn use or masturbation' },
+              { label: 'Both', targets: ['SMOKE', 'FAP'] as HabitTarget[], desc: 'Track both side by side' },
+            ].map((option) => (
+              <button
+                key={option.label}
+                onClick={() => {
+                  const updated = { ...plan, targets: option.targets, habitChoiceMade: true };
+                  setPlan(updated);
+                  Storage.savePlan(updated);
+                  setShowHabitPrompt(false);
+                }}
+                className="w-full p-4 rounded-2xl border border-[#C4C4C4] dark:border-[#3D3D3D] text-left hover:border-black dark:hover:border-white transition"
+              >
+                <span className="text-sm font-bold block">{option.label}</span>
+                <span className="text-[11px] text-[#5E5E5E] dark:text-[#A6A6A6]">{option.desc}</span>
+              </button>
+            ))}
+          </div>
+        </div>
       )}
 
       {/* Onboarding Wizard Modal */}

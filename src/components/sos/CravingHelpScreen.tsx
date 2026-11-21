@@ -21,6 +21,8 @@ interface CravingHelpScreenProps {
   onCravingBeaten: (durationSeconds: number, toolUsed?: string) => void;
   onSmokedDuringCraving: () => void;
   onRecordToolFeedback?: (toolId: string, helped: boolean) => void;
+  /** Which tracker this urge belongs to, so the slip button tells the truth. */
+  habit?: 'SMOKE' | 'FAP';
 }
 
 type BreathingPattern = '4-6' | '4-4-4-4' | '4-7-8';
@@ -41,6 +43,7 @@ export const CravingHelpScreen: React.FC<CravingHelpScreenProps> = ({
   onClose,
   onCravingBeaten,
   onSmokedDuringCraving,
+  habit = 'SMOKE',
 }) => {
   // 3-minute countdown in seconds (180s)
   const [countdown, setCountdown] = useState(180);
@@ -275,7 +278,7 @@ export const CravingHelpScreen: React.FC<CravingHelpScreenProps> = ({
               }}
               className="w-full h-11 rounded-2xl border border-[#D71921] text-[#D71921] font-bold text-xs flex items-center justify-center gap-1.5 hover:bg-[#D71921]/10 active:scale-95 transition"
             >
-              <span>I smoked</span>
+              <span>{habit === 'FAP' ? 'I slipped' : 'I smoked'}</span>
             </button>
           </div>
         </div>

@@ -14,6 +14,7 @@ import { SegmentedBar } from './SegmentedBar';
 import { ProgressRing } from './ProgressRing';
 import { BubbleStat } from './BubbleStat';
 import { DefaultHomeCards } from '../today/DefaultHomeCards';
+import { FapCard } from '../fap/FapCard';
 import './home.css';
 
 interface HomeScreenProps {
@@ -29,6 +30,10 @@ interface HomeScreenProps {
   onPledge: () => void;
   onLogCigarette: () => void;
   onOpenSettings: () => void;
+  /** Second tracker: show the porn/fap card when they chose "both". */
+  showFap?: boolean;
+  onLogFap?: () => void;
+  onOpenFapUrge?: () => void;
 }
 
 /** Cards whose content already lives in the hero, so the deck must not repeat them. */
@@ -98,17 +103,28 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   onPledge,
   onLogCigarette,
   onOpenSettings,
+  showFap = false,
+  onLogFap,
+  onOpenFapUrge,
 }) => {
   const [now, setNow] = useState(() => Date.now());
   const [showNextMilestone, setShowNextMilestone] = useState(false);
 
+  // Nothing on this screen shows seconds, so a one-second tick only burned
+  // battery and re-rendered the whole deck. Ten seconds keeps the timers honest
+  // and stops work while the app is in the background.
   useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), 1000);
+    const timer = setInterval(() => {
+      if (document.visibilityState === 'visible') setNow(Date.now());
+    }, 10000);
     return () => clearInterval(timer);
   }, []);
 
-  const stats = calculateStats(entries, plan, now);
-  const smokeFree = calculateSmokeFreeDays(entries, plan.quitStartDate, now);
+  const stats = useMemo(() => calculateStats(entries, plan, now), [entries, plan, now]);
+  const smokeFree = useMemo(
+    () => calculateSmokeFreeDays(entries, plan.quitStartDate, now),
+    [entries, plan.quitStartDate, now]
+  );
   const hours = stats.currentStreak.totalHours;
 
   const nextMilestone = MILESTONES.find((m) => m.hours > hours) ?? MILESTONES[MILESTONES.length - 1];
@@ -219,7 +235,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             onClick={() => setShowNextMilestone((v) => !v)}
             aria-label="Switch between your day count and your next milestone"
             className="home-press flex items-center gap-1 rounded-full px-3.5 py-2"
-            style={{ background: 'rgba(255,255,255,0.8)', boxShadow: '0 6px 16px rgba(30,90,140,0.07)' }}
+            style={{ background: 'var(--chip)', boxShadow: '0 6px 16px rgba(30,90,140,0.07)' }}
           >
             <span className="home-label" style={{ color: 'var(--ink)' }}>
               {showNextMilestone
@@ -356,7 +372,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             className="home-press flex h-12 flex-1 items-center justify-center gap-2 rounded-full text-[13px] font-extrabold uppercase"
             style={{
               background: 'var(--ink)',
-              color: '#fff',
+              color: 'var(--ink-contrast)',
               letterSpacing: '0.1em',
               boxShadow: '0 10px 22px rgba(11,27,43,0.18)',
             }}
@@ -370,7 +386,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             aria-label="I smoked just now"
             className="home-press flex h-12 w-12 items-center justify-center rounded-full"
             style={{
-              background: 'rgba(255,255,255,0.85)',
+              background: 'var(--chip)',
               boxShadow: '0 8px 20px rgba(30,90,140,0.1)',
             }}
           >
@@ -382,13 +398,26 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             aria-label="Customize home"
             className="home-press flex h-12 w-12 items-center justify-center rounded-full"
             style={{
-              background: 'rgba(255,255,255,0.85)',
+              background: 'var(--chip)',
               boxShadow: '0 8px 20px rgba(30,90,140,0.1)',
             }}
           >
             <Sparkles className="h-[18px] w-[18px]" style={{ color: 'var(--ink)' }} strokeWidth={2} />
           </button>
         </div>
+
+        {/* ---------- Second tracker: porn / fap ---------- */}
+        {showFap && onLogFap && onOpenFapUrge && (
+          <FapCard
+            plan={plan}
+            entries={entries}
+            onLogSlip={onLogFap}
+            onOpenUrgeHelp={onOpenFapUrge}
+            onOpenSettings={onOpenSettings}
+            className="home-rise mt-4"
+            style={{ animationDelay: '400ms' }}
+          />
+        )}
 
         {/* ---------- Optional cards the user added in Customize ---------- */}
         {deckCards.length > 0 && (

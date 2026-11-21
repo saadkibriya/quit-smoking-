@@ -1,6 +1,17 @@
 export type HabitMode = 'QUIT' | 'CUT_DOWN' | 'TRACK';
 
-export type EntryType = 'CIGARETTE' | 'CRAVING_BEATEN' | 'PLEDGE' | 'smoked' | 'craving_resisted' | 'craving_not_resisted';
+/** What the person said they want to work on in onboarding. */
+export type HabitTarget = 'SMOKE' | 'FAP';
+
+export type EntryType =
+  | 'CIGARETTE'
+  | 'CRAVING_BEATEN'
+  | 'PLEDGE'
+  | 'smoked'
+  | 'craving_resisted'
+  | 'craving_not_resisted'
+  | 'FAP'
+  | 'FAP_URGE_BEATEN';
 
 export type CoachStyle = 'GENTLE' | 'DIRECT' | 'SCIENCE';
 
@@ -22,7 +33,8 @@ export interface Entry {
   toolUsed?: string;
   note?: string;
   manualEntry?: boolean;
-  habitId?: string; // default: 'smoking'
+  habitId?: string; // 'smoking' (default) or 'fap'
+  urgeStrength?: number; // 1 to 10, fap urge that was ridden out
 }
 
 export interface PackPriceEntry {
@@ -99,7 +111,15 @@ export interface IfThenPlan {
 
 export interface UserPlan {
   mode: HabitMode;
+  /** Habits being tracked. Defaults to smoking only for older saves. */
+  targets: HabitTarget[];
+  /** True once the person has answered "what are you trying to quit?". */
+  habitChoiceMade?: boolean;
   quitStartDate: string; // ISO string when quit streak begins
+  /** Clean-streak anchor for the porn/fap tracker (resets on a logged slip). */
+  fapStartDate: string; // ISO
+  fapPerDay: number; // usual times per day, used for context and warnings
+  fapGoalPerDay: number; // 0 means abstain
   usualPerDay: number;
   cigarettesPerPack: number;
   packPrice: number;
