@@ -226,6 +226,11 @@ export default function App() {
   const tracksFap = targets.includes('FAP');
   const fapOnly = tracksFap && !tracksSmoke;
 
+  // Pace charts are cigarette-only, so a fap-only user must never sit on that tab.
+  useEffect(() => {
+    if (!tracksSmoke && activeTab === 'pace') setActiveTab('today');
+  }, [tracksSmoke, activeTab]);
+
   // Handle logging a cigarette ("I smoked")
   const handleLogCigarette = (extraData?: Partial<Entry>) => {
     const newEntry: Entry = {
@@ -408,7 +413,7 @@ export default function App() {
           )}
 
           {/* Cut-down and track modes keep the original home until they get the same treatment. */}
-          {activeTab === 'today' && plan.mode !== 'QUIT' && (
+          {activeTab === 'today' && plan.mode !== 'QUIT' && !fapOnly && (
             <div className="space-y-4 px-4 pt-3 pb-40">
               <HeroCard
                 plan={plan}
@@ -425,10 +430,21 @@ export default function App() {
                 onOpenLogSheet={() => setShowLogSheet(true)}
                 onOpenCustomize={() => setShowCustomizeHome(true)}
               />
+
+              {/* Cut-down and track modes need the second tracker too. */}
+              {tracksFap && (
+                <FapCard
+                  plan={plan}
+                  entries={entries}
+                  onLogSlip={handleLogFap}
+                  onOpenUrgeHelp={handleOpenFapUrge}
+                  onOpenSettings={() => setActiveTab('toolkit')}
+                />
+              )}
             </div>
           )}
 
-          {activeTab === 'pace' && (
+          {activeTab === 'pace' && tracksSmoke && (
             <PaceTab
               plan={plan}
               entries={entries}
@@ -516,7 +532,12 @@ export default function App() {
         )}
 
         {/* Bottom Navigation */}
-        <BottomNav activeTab={activeTab} onChangeTab={setActiveTab} onCraving={handleOpenSosModal} />
+        <BottomNav
+          activeTab={activeTab}
+          onChangeTab={setActiveTab}
+          onCraving={handleOpenSosModal}
+          hidePace={!tracksSmoke}
+        />
       </div>
 
       {/* Customize Home Drawer (Section 3) */}

@@ -42,7 +42,6 @@ export const HomeScreenWidgetSimulator: React.FC<HomeScreenWidgetSimulatorProps>
 }) => {
   const [now, setNow] = useState(Date.now());
   const [viewMode, setViewMode] = useState<'launcher' | 'catalog'>('launcher');
-  const [activeCatalogFilter, setActiveCatalogFilter] = useState<'all' | 'phase1' | 'phase2' | 'phase3'>('all');
   const [activeLauncherWidget, setActiveLauncherWidget] = useState<'w1' | 'w4' | 'w5' | 'w6' | 'w7' | 'w8' | 'w9'>('w1');
   const [w1Size, setW1Size] = useState<'4x2' | '3x2' | '2x2'>('4x2');
   const [simulatedUndoUntil, setSimulatedUndoUntil] = useState<number | null>(null);
@@ -102,32 +101,32 @@ export const HomeScreenWidgetSimulator: React.FC<HomeScreenWidgetSimulatorProps>
       aria-label="Nothing OS Launcher and Home-Screen Widget Simulator"
       className="fixed inset-0 z-50 bg-black/85 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 overflow-y-auto"
     >
-      <div className="w-full max-w-xl bg-[#000000] border border-[#2A2A2A] rounded-3xl p-4 sm:p-6 shadow-2xl text-white my-auto animate-in zoom-in-95 duration-200 flex flex-col max-h-[95vh]">
+      <div className="w-full max-w-xl bg-[#FFFFFF] dark:bg-[#000000] border border-[#C4C4C4] dark:border-[#2A2A2A] rounded-3xl p-4 sm:p-6 shadow-2xl text-black dark:text-white my-auto animate-in zoom-in-95 duration-200 flex flex-col max-h-[95vh]">
         {/* Top Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-[#2A2A2A] mb-3 shrink-0">
+        <div className="flex items-center justify-between pb-3 border-b border-[#C4C4C4] dark:border-[#2A2A2A] mb-3 shrink-0">
           <div>
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-[#D71921] animate-pulse" />
               <h3 className="text-base font-extrabold tracking-tight">
-                Nothing OS Launcher & Home Screen
+                Home screen widgets
               </h3>
             </div>
-            <p className="text-[11px] text-[#8A8A8A]">
-              Live interactive preview of widgets running on Android 15 with Chronometer
+            <p className="text-[11px] text-[#5E5E5E] dark:text-[#8A8A8A]">
+              A preview of the four widgets that install with Unlit
             </p>
           </div>
           <button
             onClick={onClose}
-            aria-label="Close launcher"
-            className="w-9 h-9 rounded-full border border-[#2A2A2A] flex items-center justify-center hover:bg-[#141414] active:scale-95 transition"
+            aria-label="Close widgets preview"
+            className="w-9 h-9 rounded-full border border-[#C4C4C4] dark:border-[#2A2A2A] flex items-center justify-center hover:bg-[#F2F2F2] dark:hover:bg-[#141414] active:scale-95 transition"
           >
-            <X className="w-4 h-4 text-white" />
+            <X className="w-4 h-4 text-black dark:text-white" />
           </button>
         </div>
 
         {/* View Mode Switcher: Launcher vs Catalog */}
         <div className="flex items-center justify-between gap-2 mb-3 shrink-0">
-          <div className="flex p-0.5 bg-[#141414] rounded-full border border-[#2A2A2A]">
+          <div className="flex p-0.5 bg-[#F2F2F2] dark:bg-[#141414] rounded-full border border-[#C4C4C4] dark:border-[#2A2A2A]">
             <button
               onClick={() => {
                 Sound.tick();
@@ -135,8 +134,8 @@ export const HomeScreenWidgetSimulator: React.FC<HomeScreenWidgetSimulatorProps>
               }}
               className={`px-3 py-1.5 rounded-full text-xs font-bold transition flex items-center gap-1.5 ${
                 viewMode === 'launcher'
-                  ? 'bg-white text-black shadow-xs'
-                  : 'text-[#8A8A8A] hover:text-white'
+                  ? 'bg-black text-white dark:bg-white dark:text-black shadow-xs'
+                  : 'text-[#5E5E5E] dark:text-[#8A8A8A] hover:text-black dark:hover:text-white'
               }`}
             >
               <Smartphone className="w-3.5 h-3.5" />
@@ -149,17 +148,17 @@ export const HomeScreenWidgetSimulator: React.FC<HomeScreenWidgetSimulatorProps>
               }}
               className={`px-3 py-1.5 rounded-full text-xs font-bold transition flex items-center gap-1.5 ${
                 viewMode === 'catalog'
-                  ? 'bg-white text-black shadow-xs'
-                  : 'text-[#8A8A8A] hover:text-white'
+                  ? 'bg-black text-white dark:bg-white dark:text-black shadow-xs'
+                  : 'text-[#5E5E5E] dark:text-[#8A8A8A] hover:text-black dark:hover:text-white'
               }`}
             >
               <LayoutGrid className="w-3.5 h-3.5" />
-              <span>All 9 Widgets (W1–W9)</span>
+              <span>Widget gallery</span>
             </button>
           </div>
 
-          <span className="text-[10px] font-mono text-[#8A8A8A] hidden sm:inline">
-            Active: <span className="text-white font-bold">{curr}</span>
+          <span className="text-[10px] font-mono text-[#5E5E5E] dark:text-[#8A8A8A] hidden sm:inline">
+            Currency: <span className="text-black dark:text-white font-bold">{curr}</span>
           </span>
         </div>
 
@@ -167,17 +166,14 @@ export const HomeScreenWidgetSimulator: React.FC<HomeScreenWidgetSimulatorProps>
         {viewMode === 'launcher' && (
           <div className="flex-1 overflow-y-auto space-y-3">
             {/* Widget switcher for the launcher */}
-            <div className="flex items-center justify-between bg-[#111111] p-2 rounded-2xl border border-[#222222] text-xs">
+            <div className="flex items-center justify-between bg-[#F2F2F2] dark:bg-[#111111] p-2 rounded-2xl border border-[#C4C4C4] dark:border-[#222222] text-xs">
               <span className="font-mono text-[10px] text-[#8A8A8A] uppercase">Active on screen:</span>
               <div className="flex gap-1 overflow-x-auto">
                 {[
-                  { id: 'w1', label: 'W1 (Main)' },
-                  { id: 'w4', label: 'W4 (Compact)' },
-                  { id: 'w5', label: 'W5 (Strip)' },
-                  { id: 'w6', label: 'W6 (Money)' },
-                  { id: 'w7', label: 'W7 (Milestone)' },
-                  { id: 'w8', label: 'W8 (Calendar)' },
-                  { id: 'w9', label: 'W9 (Stats)' },
+                  { id: 'w1', label: 'Days' },
+                  { id: 'w4', label: 'Days 2×2' },
+                  { id: 'w5', label: 'Time' },
+                  { id: 'w6', label: 'Savings' },
                 ].map((w) => (
                   <button
                     key={w.id}
@@ -187,8 +183,8 @@ export const HomeScreenWidgetSimulator: React.FC<HomeScreenWidgetSimulatorProps>
                     }}
                     className={`px-2 py-0.5 rounded-md text-[10px] font-mono font-bold transition ${
                       activeLauncherWidget === w.id
-                        ? 'bg-white text-black'
-                        : 'text-[#8A8A8A] hover:text-white border border-[#2A2A2A]'
+                        ? 'bg-black text-white dark:bg-white dark:text-black'
+                        : 'text-[#5E5E5E] dark:text-[#8A8A8A] hover:text-black dark:hover:text-white border border-[#C4C4C4] dark:border-[#2A2A2A]'
                     }`}
                   >
                     {w.label}
@@ -559,33 +555,17 @@ export const HomeScreenWidgetSimulator: React.FC<HomeScreenWidgetSimulatorProps>
         {/* ================= VIEW B: WIDGET CATALOG (W1-W9) ================= */}
         {viewMode === 'catalog' && (
           <div className="flex-1 overflow-y-auto space-y-4 pr-1">
-            {/* Catalog Filter */}
-            <div className="flex gap-1 shrink-0">
-              {[
-                { id: 'all', label: 'All' },
-                { id: 'phase1', label: 'Phase 1 (W1–W3)' },
-                { id: 'phase2', label: 'Phase 2 (W4–W6)' },
-                { id: 'phase3', label: 'Phase 3 (W7–W9)' },
-              ].map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveCatalogFilter(tab.id as any)}
-                  className={`px-3 py-1 rounded-full text-xs font-semibold transition ${
-                    activeCatalogFilter === tab.id
-                      ? 'bg-white text-black'
-                      : 'bg-[#141414] text-[#8A8A8A] hover:text-white border border-[#2A2A2A]'
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
+            <div className="flex items-center justify-between shrink-0">
+              <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#5E5E5E] dark:text-[#8A8A8A]">
+                Four widgets · every one resizable
+              </span>
             </div>
 
             {/* W1 Detailed */}
             <div className="p-4 rounded-3xl bg-[#000000] border border-[#2A2A2A] space-y-2">
               <div className="flex items-center justify-between text-xs">
-                <span className="font-bold text-white">W1 — Smoke-Free (Main) 4×2</span>
-                <span className="text-[10px] font-mono text-[#8A8A8A]">Chronometer formula: elapsedMs - days*86400000</span>
+                <span className="font-bold text-white">Unlit days — 2×2 up to 4×4</span>
+                <span className="text-[10px] font-mono text-[#8A8A8A]">Ticks live · tap the number to log</span>
               </div>
               <div className="flex items-baseline gap-2">
                 <span className="font-doto font-black text-4xl text-white">{streak.days}</span>
@@ -593,29 +573,28 @@ export const HomeScreenWidgetSimulator: React.FC<HomeScreenWidgetSimulatorProps>
                 <span className="font-mono text-xs text-white ml-2">{streak.formattedClock}</span>
               </div>
               <p className="text-[11px] text-[#8A8A8A]">
-                Always ticks live via Android Chronometer layout. Resizable down to 2×2.
+                Ticks live at any size, and the layout switches to a wide or tall version as you resize.
               </p>
             </div>
 
-            {/* W2 & W3 */}
             <div className="grid grid-cols-2 gap-3">
               <div className="p-3.5 rounded-3xl bg-[#000000] border border-[#2A2A2A] text-center">
-                <span className="text-xs font-bold block mb-1">W2 — Craving (1×1)</span>
-                <span className="text-[10px] text-[#8A8A8A] block">1-tap opens Craving Help screen directly into breathing.</span>
+                <span className="text-xs font-bold block mb-1">Resize freely</span>
+                <span className="text-[10px] text-[#8A8A8A] block">Pull any corner: 2×2, 2×4, 4×2 or 4×4. The content adapts.</span>
               </div>
               <div className="p-3.5 rounded-3xl bg-[#000000] border border-[#2A2A2A] text-center">
-                <span className="text-xs font-bold text-[#D71921] block mb-1">W3 — Quick Log (1×1)</span>
-                <span className="text-[10px] text-[#8A8A8A] block">1-tap logs cigarette, flips to Undo for 2 minutes.</span>
+                <span className="text-xs font-bold text-[#D71921] block mb-1">Tap to log</span>
+                <span className="text-[10px] text-[#8A8A8A] block">Tap the day number, type how many, and it lands in the app.</span>
               </div>
             </div>
 
             {/* W4, W5, W6 */}
             <div className="p-4 rounded-3xl bg-[#000000] border border-[#2A2A2A] space-y-2">
-              <span className="font-bold text-xs block">W4, W5, W6 — Compact, Strip, & Money</span>
+              <span className="font-bold text-xs block">Compact and wide sizes</span>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-[#8A8A8A]">
                 <div className="p-2.5 rounded-2xl bg-[#111111]">
-                  <strong className="text-white block">W4 Compact (2×2):</strong>
-                  {streak.days} DAYS · {streak.formattedClock} + tiny craving button.
+                  <strong className="text-white block">Days (2×2):</strong>
+                  {streak.days} DAYS · {streak.formattedClock} · tap to log a smoke.
                 </div>
                 <div className="p-2.5 rounded-2xl bg-[#111111]">
                   <strong className="text-white block">W6 Money (2×2):</strong>
@@ -624,36 +603,26 @@ export const HomeScreenWidgetSimulator: React.FC<HomeScreenWidgetSimulatorProps>
               </div>
             </div>
 
-            {/* W7, W8, W9 */}
             <div className="p-4 rounded-3xl bg-[#000000] border border-[#2A2A2A] space-y-2">
-              <span className="font-bold text-xs block">W7, W8, W9 — Milestones, Calendar & Stats</span>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px] text-[#8A8A8A]">
-                <div className="p-2.5 rounded-2xl bg-[#111111]">
-                  <strong className="text-white block">W7 Milestone (4×2)</strong>
-                  Next: {nextMilestone.title} ({nextMilestone.source})
-                </div>
-                <div className="p-2.5 rounded-2xl bg-[#111111]">
-                  <strong className="text-white block">W8 Dot Calendar</strong>
-                  28 dot matrix (white = clear, red = slip)
-                </div>
-                <div className="p-2.5 rounded-2xl bg-[#111111]">
-                  <strong className="text-white block">W9 Stats</strong>
-                  Money, avoided count, cravings beaten, record
-                </div>
-              </div>
+              <span className="font-bold text-xs block">How to add them</span>
+              <ol className="list-decimal list-inside space-y-1 text-[11px] text-[#8A8A8A]">
+                <li>Long-press an empty spot on your home screen.</li>
+                <li>Tap Widgets, then open Unlit.</li>
+                <li>Drag out Days, Time, Savings or Not smoked, then resize it.</li>
+              </ol>
             </div>
           </div>
         )}
 
         {/* Footer / Instructions */}
-        <div className="pt-3 border-t border-[#2A2A2A] mt-3 flex items-center justify-between text-xs text-[#8A8A8A] shrink-0">
-          <div className="flex items-center gap-1.5 text-[11px]">
-            <Info className="w-3.5 h-3.5 text-white shrink-0" />
-            <span>Install on phone via browser menu → <strong className="text-white">Add to Home screen</strong></span>
+        <div className="pt-3 border-t border-[#C4C4C4] dark:border-[#2A2A2A] mt-3 flex items-center justify-between text-xs text-[#5E5E5E] dark:text-[#8A8A8A] shrink-0">
+          <div className="flex items-center gap-1.5 text-[11px] pr-2">
+            <Info className="w-3.5 h-3.5 text-black dark:text-white shrink-0" />
+            <span>On your phone: long-press home → Widgets → Unlit.</span>
           </div>
           <button
             onClick={onClose}
-            className="px-4 py-1.5 rounded-full bg-white text-black font-bold text-xs active:scale-95 transition"
+            className="px-4 py-1.5 rounded-full bg-black text-white dark:bg-white dark:text-black font-bold text-xs active:scale-95 transition shrink-0"
           >
             Back to App
           </button>

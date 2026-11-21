@@ -14,6 +14,7 @@ import {
   calculateMoneyKept,
   calculateCurrentStreak,
 } from '../../domain/calculations';
+import { countUrgesBeaten, formatCleanTime, getFapStats } from '../../domain/fap';
 import { MILESTONES } from '../../content/milestones';
 import { BODY_RECOVERY_TIMELINE } from '../../content/bodyRecovery';
 import { Sound } from '../../data/sound';
@@ -67,6 +68,12 @@ export const JourneyTab: React.FC<JourneyTabProps> = ({
   const avgTimeBetween = calculateAverageTimeBetweenCigarettes(entries);
   const firstCigTrend = calculateFirstCigaretteOfDayTrend(entries, plan.wakeTime);
   const topTriggers = calculateTopTriggers(entries);
+
+  // The second tracker gets its own summary so a porn/fap user is not looking
+  // at a page of cigarette zeroes with nothing about the habit they chose.
+  const fapTracked = (plan.targets || []).includes('FAP');
+  const fapStats = fapTracked ? getFapStats(entries, plan.fapStartDate, now) : null;
+  const fapUrgesBeaten = fapTracked ? countUrgesBeaten(entries, 7, now) : 0;
 
   // Group entries by day for month calendar and history
   const today = new Date(now);
@@ -131,6 +138,49 @@ export const JourneyTab: React.FC<JourneyTabProps> = ({
 
   return (
     <div className="w-full max-w-2xl mx-auto space-y-5 pb-24 px-4 pt-3">
+      {/* 0. Second tracker (porn / fap) */}
+      {fapStats && (
+        <section className="p-4 rounded-3xl bg-[#F2F2F2] dark:bg-[#141414] border border-[#C4C4C4] dark:border-[#3D3D3D]">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-bold text-black dark:text-white">Porn / fap</h3>
+            <span className="text-[10px] font-semibold text-[#5E5E5E] dark:text-[#A6A6A6]">
+              {fapStats.lastLapseAt
+                ? `Last slip ${new Date(fapStats.lastLapseAt).toLocaleDateString(undefined, {
+                    month: 'short',
+                    day: 'numeric',
+                  })}`
+                : 'No slips logged'}
+            </span>
+          </div>
+          <div className="mt-2 grid grid-cols-3 gap-2">
+            <div>
+              <span className="text-lg font-extrabold text-black dark:text-white tabular-nums">
+                {formatCleanTime(fapStats)}
+              </span>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-[#5E5E5E] dark:text-[#A6A6A6]">
+                Clean streak
+              </p>
+            </div>
+            <div>
+              <span className="text-lg font-extrabold text-black dark:text-white tabular-nums">
+                {fapStats.weekLapses}
+              </span>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-[#5E5E5E] dark:text-[#A6A6A6]">
+                Slips this week
+              </p>
+            </div>
+            <div>
+              <span className="text-lg font-extrabold text-black dark:text-white tabular-nums">
+                {fapUrgesBeaten}
+              </span>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-[#5E5E5E] dark:text-[#A6A6A6]">
+                Urges beaten
+              </p>
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* 1. Period Selector (Segmented Button) */}
       <div className="flex items-center justify-center p-1 rounded-full bg-[#F2F2F2] dark:bg-[#141414] border border-[#C4C4C4] dark:border-[#3D3D3D]">
         {(['WEEK', 'MONTH', 'ALL_TIME'] as const).map((p) => {

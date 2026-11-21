@@ -8,6 +8,8 @@ interface BottomNavProps {
   activeTab: TabId;
   onChangeTab: (tab: TabId) => void;
   onCraving: () => void;
+  /** Pace is cigarette-only; hide it when smoking is not being tracked. */
+  hidePace?: boolean;
 }
 
 /**
@@ -15,10 +17,17 @@ interface BottomNavProps {
  * inactive tabs stay icon-only so the bar stays calm. The round green button is
  * the craving SOS — the one action you might need in a hurry.
  */
-export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, onChangeTab, onCraving }) => {
+export const BottomNav: React.FC<BottomNavProps> = ({
+  activeTab,
+  onChangeTab,
+  onCraving,
+  hidePace = false,
+}) => {
   const tabs: Array<{ id: TabId; label: string; icon: React.ReactNode }> = [
     { id: 'today', label: 'Today', icon: <Calendar className="h-[18px] w-[18px]" strokeWidth={2} /> },
-    { id: 'pace', label: 'Pace', icon: <Gauge className="h-[18px] w-[18px]" strokeWidth={2} /> },
+    ...(hidePace
+      ? []
+      : [{ id: 'pace' as TabId, label: 'Pace', icon: <Gauge className="h-[18px] w-[18px]" strokeWidth={2} /> }]),
     { id: 'journey', label: 'Progress', icon: <Compass className="h-[18px] w-[18px]" strokeWidth={2} /> },
     { id: 'toolkit', label: 'Toolkit', icon: <Wrench className="h-[18px] w-[18px]" strokeWidth={2} /> },
   ];

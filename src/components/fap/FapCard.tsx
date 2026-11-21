@@ -29,8 +29,12 @@ export const FapCard: React.FC<FapCardProps> = ({
   style,
 }) => {
   const [now, setNow] = useState(() => Date.now());
+  // Minute-precision timer: tick while the card is on screen only, so a deck
+  // full of cards is not re-rendering in the background.
   useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), 30000);
+    const timer = setInterval(() => {
+      if (document.visibilityState === 'visible') setNow(Date.now());
+    }, 30000);
     return () => clearInterval(timer);
   }, []);
 
@@ -49,7 +53,7 @@ export const FapCard: React.FC<FapCardProps> = ({
             className="home-label rounded-full px-2.5 py-1"
             style={{
               color: stats.cleanToday ? 'var(--green)' : 'var(--ink)',
-              background: stats.cleanToday ? 'rgba(34,197,94,0.12)' : 'rgba(11,27,43,0.06)',
+              background: stats.cleanToday ? 'rgba(34,197,94,0.12)' : 'var(--chip)',
             }}
           >
             {stats.cleanToday ? 'Clean today' : `${stats.todayLapses} today`}
@@ -69,7 +73,10 @@ export const FapCard: React.FC<FapCardProps> = ({
 
       <div className="mt-3 grid grid-cols-3 gap-2">
         {[
-          { label: 'Today', value: stats.todayLapses },
+          {
+            label: plan.fapGoalPerDay > 0 ? `Today / ${plan.fapGoalPerDay}` : 'Today',
+            value: stats.todayLapses,
+          },
           { label: '7 days', value: stats.weekLapses },
           { label: 'Urges beaten', value: urges },
         ].map((item) => (
@@ -127,12 +134,18 @@ export const FapHome: React.FC<FapHomeProps> = ({
 }) => {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), 30000);
+    const timer = setInterval(() => {
+      if (document.visibilityState === 'visible') setNow(Date.now());
+    }, 30000);
     return () => clearInterval(timer);
   }, []);
 
   const stats = getFapStats(entries, plan.fapStartDate, now);
   const urges = countUrgesBeaten(entries, 7, now);
+  const bestClean =
+    stats.longestCleanHours >= 24
+      ? `${Math.floor(stats.longestCleanHours / 24)}d`
+      : `${Math.max(1, Math.floor(stats.longestCleanHours))}h`;
 
   return (
     <div className="home-root">
@@ -181,7 +194,7 @@ export const FapHome: React.FC<FapHomeProps> = ({
           <span className="home-label">Current clean streak</span>
           <div className="home-num mt-2 text-[52px]">{formatCleanTime(stats)}</div>
           <div className="home-body mt-2 text-[12px]">
-            Best {Math.floor(stats.longestCleanHours / 24)}d &middot; {stats.totalLapses} slips logged
+            Best {bestClean} &middot; {stats.totalLapses} slips logged
           </div>
 
           <div className="mt-4 grid grid-cols-3 gap-2">

@@ -142,7 +142,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
 
       {showConfirmModal && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-[#141414] border border-[#3D3D3D] rounded-3xl p-6 w-full max-w-sm text-white shadow-2xl">
+          <div className="bg-[#FFFFFF] dark:bg-[#141414] border border-[#C4C4C4] dark:border-[#3D3D3D] rounded-3xl p-6 w-full max-w-sm text-black dark:text-white shadow-2xl">
             <h4 className="font-bold text-base mb-1">Log a cigarette?</h4>
             <p className="text-xs text-[#8A8A8A] mb-5">
               This restarts your current timer. Every smoke-free day, saved coin and badge you already earned
@@ -151,7 +151,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
             <div className="flex gap-2">
               <button
                 onClick={() => setShowConfirmModal(false)}
-                className="flex-1 h-11 rounded-full border border-[#3D3D3D] text-xs font-bold hover:bg-[#262626]"
+                className="flex-1 h-11 rounded-full border border-[#C4C4C4] dark:border-[#3D3D3D] text-xs font-bold hover:bg-[#F2F2F2] dark:hover:bg-[#262626] transition"
               >
                 Cancel
               </button>

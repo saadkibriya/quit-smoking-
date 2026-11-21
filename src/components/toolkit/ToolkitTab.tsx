@@ -380,6 +380,13 @@ export const ToolkitTab: React.FC<ToolkitTabProps> = ({
                 );
               })}
 
+              {targets.length === 1 && (
+                <p className="px-4 py-3 text-[11px] text-[#5E5E5E] dark:text-[#A6A6A6]">
+                  One habit always stays on. Add the other any time — nothing you have
+                  logged is lost.
+                </p>
+              )}
+
               {tracksFap && fapStats && (
                 <div className="p-4 space-y-3 text-xs">
                   <div className="flex items-end justify-between">
@@ -399,7 +406,11 @@ export const ToolkitTab: React.FC<ToolkitTabProps> = ({
                       <label className="font-bold block mb-1">Streak starts</label>
                       <input
                         type="date"
-                        value={new Date(plan.fapStartDate).toISOString().slice(0, 10)}
+                        value={(() => {
+                          const d = new Date(plan.fapStartDate);
+                          const safe = isNaN(d.getTime()) ? new Date() : d;
+                          return `${safe.getFullYear()}-${String(safe.getMonth() + 1).padStart(2, '0')}-${String(safe.getDate()).padStart(2, '0')}`;
+                        })()}
                         onChange={(e) => {
                           const value = e.target.value;
                           if (!value) return;

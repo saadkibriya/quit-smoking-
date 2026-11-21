@@ -322,8 +322,10 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                       key={opt.id}
                       onClick={() => {
                         Sound.tick();
+                        // One clear answer, like a radio group: tapping a
+                        // single habit replaces the previous choice.
                         if (opt.id === 'BOTH') setTargets(['SMOKE', 'FAP']);
-                        else toggleTarget(opt.id as HabitTarget);
+                        else setTargets([opt.id as HabitTarget]);
                       }}
                       aria-pressed={active}
                       className={`w-full p-3.5 rounded-2xl border text-left transition ${
