@@ -2,6 +2,18 @@
 
 All notable changes to Unlit are documented here per `infos.md` (Worker Rules) and `roadmap.md`.
 
+## [2026-11-21] — Two more widgets: savings and not smoked
+
+### Added
+- **`Unlit savings` widget.** The hero is the money saved since the quit date
+  (`৳ 1,240`), with cigarettes not smoked and the day count as the pair below.
+- **`Unlit not smoked` widget.** The hero is the cigarette count the plan says you
+  have avoided, with savings and days underneath. Like the days widget, tapping the
+  number opens the quick-log dialog.
+- All four widgets share one renderer, so they get the same four size layouts
+  (2x2 / 2x4 / 4x2 / 4x4), the same light/dark theming and the same resize handling.
+  The time and savings heroes open the app on tap; the count heroes open the log dialog.
+
 ## [2026-11-20] — Two simple, size-aware home-screen widgets
 
 ### Added

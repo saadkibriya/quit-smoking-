@@ -45,12 +45,14 @@ import org.json.JSONObject;
 /**
  * Shared home-screen widget behaviour.
  *
- * Two widgets use this: `Unlit — days` (hero is the day count, tapping the
- * number opens the quick log dialog) and `Unlit — time` (hero is the elapsed
- * time, from minutes up to days). Both adapt their layout to the space the user
- * gives them: 2x2 shows only the hero, 2x4 stacks the details, 4x2 puts the
- * numbers beside the hero, 4x4 is the full card. Colours follow the system's
- * light/dark setting, so the same widget is black on white or white on black.
+ * Four widgets use this: `Unlit — days` (hero is the day count, tapping the
+ * number opens the quick log dialog), `Unlit — time` (hero is the elapsed time,
+ * from minutes up to days), `Unlit — savings` (hero is the money saved) and
+ * `Unlit — not smoked` (hero is the cigarette count). All of them adapt their
+ * layout to the space the user gives them: 2x2 shows only the hero, 2x4 stacks
+ * the details, 4x2 puts the numbers beside the hero, 4x4 is the full card.
+ * Colours follow the system's light/dark setting, so the same widget is black on
+ * white or white on black.
  */
 public abstract class UnlitWidgetBase extends AppWidgetProvider {
     public static final String ACTION_REFRESH = "com.unlit.app.REFRESH_WIDGET";
@@ -60,13 +62,15 @@ public abstract class UnlitWidgetBase extends AppWidgetProvider {
 
     static final int MODE_DAYS = 0;
     static final int MODE_CLOCK = 1;
+    static final int MODE_MONEY = 2;
+    static final int MODE_AVOIDED = 3;
 
     static final int SIZE_SMALL = 0;
     static final int SIZE_TALL = 1;
     static final int SIZE_WIDE = 2;
     static final int SIZE_LARGE = 3;
 
-    /** Which of the two widgets this provider renders. */
+    /** Which of the widgets this provider renders. */
     protected abstract int mode();
 
     @Override
@@ -90,13 +94,15 @@ public abstract class UnlitWidgetBase extends AppWidgetProvider {
         }
     }
 
-    /** Rebuilds every placed widget of both kinds. Safe when none are placed. */
+    /** Rebuilds every placed widget of every kind. Safe when none are placed. */
     public static void refreshAll(Context context) {
         try {
             Context app = context.getApplicationContext();
             AppWidgetManager manager = AppWidgetManager.getInstance(app);
             updateAll(app, manager, manager.getAppWidgetIds(new ComponentName(app, DaysWidgetProvider.class)), MODE_DAYS);
             updateAll(app, manager, manager.getAppWidgetIds(new ComponentName(app, ClockWidgetProvider.class)), MODE_CLOCK);
+            updateAll(app, manager, manager.getAppWidgetIds(new ComponentName(app, MoneyWidgetProvider.class)), MODE_MONEY);
+            updateAll(app, manager, manager.getAppWidgetIds(new ComponentName(app, AvoidedWidgetProvider.class)), MODE_AVOIDED);
         } catch (Throwable ignored) {
             // Never let a widget failure break the caller.
         }
@@ -244,6 +250,11 @@ public abstract class UnlitWidgetBase extends AppWidgetProvider {
         return d;
     }
 
+    /** "\u09F3 1,240" — the savings widget's hero, rounded to whole units. */
+    static String money(Data d) {
+        return d.currency + String.format(Locale.US, "%,.0f", d.saved);
+    }
+
     /** "8m", "5h 42m", "12d 4h" — the time widget's hero. */
     static String elapsedShort(Data d) {
         if (d.elapsed >= 86400000L) return d.days + "d " + d.hours + "h";
@@ -312,6 +323,20 @@ public abstract class UnlitWidgetBase extends AppWidgetProvider {
             label = "UNLIT";
             sub = "OPEN THE APP TO SET UP";
             hint = "";
+        } else if (mode == MODE_MONEY) {
+            hero = money(d);
+            label = "SAVED SO FAR";
+            sub = d.days == 0L
+                    ? "SINCE " + d.since
+                    : d.days + (d.days == 1L ? " DAY" : " DAYS") + "  \u00B7  SINCE " + d.since;
+            hint = "TAP TO OPEN UNLIT";
+        } else if (mode == MODE_AVOIDED) {
+            hero = String.format(Locale.US, "%,d", d.avoided);
+            label = "NOT SMOKED";
+            sub = d.days == 0L
+                    ? "SINCE " + d.since
+                    : d.days + (d.days == 1L ? " DAY" : " DAYS") + "  \u00B7  SINCE " + d.since;
+            hint = "TAP THE NUMBER TO LOG";
         } else if (mode == MODE_CLOCK) {
             hero = elapsedShort(d);
             label = "SMOKE-FREE FOR";
@@ -338,15 +363,37 @@ public abstract class UnlitWidgetBase extends AppWidgetProvider {
         v.setTextViewText(R.id.hint, hint);
         v.setTextViewTextSize(R.id.hero, TypedValue.COMPLEX_UNIT_SP, heroSize(size, hero.length()));
 
+        // The two supporting figures follow the hero: a widget keeps its own
+        // number first and never repeats it in the pair underneath.
+        String stat1Value;
+        String stat1Label;
+        String stat2Value;
+        String stat2Label;
         if (d.quit <= 0L) {
-            v.setTextViewText(R.id.stat1_value, "--");
-            v.setTextViewText(R.id.stat2_value, "--");
+            stat1Value = "--";
+            stat1Label = "NOT SMOKED";
+            stat2Value = "--";
+            stat2Label = "SAVED";
+        } else if (mode == MODE_MONEY) {
+            stat1Value = String.format(Locale.US, "%,d", d.avoided);
+            stat1Label = "NOT SMOKED";
+            stat2Value = String.valueOf(d.days);
+            stat2Label = d.days == 1L ? "DAY" : "DAYS";
+        } else if (mode == MODE_AVOIDED) {
+            stat1Value = money(d);
+            stat1Label = "SAVED";
+            stat2Value = String.valueOf(d.days);
+            stat2Label = d.days == 1L ? "DAY" : "DAYS";
         } else {
-            v.setTextViewText(R.id.stat1_value, String.format(Locale.US, "%,d", d.avoided));
-            v.setTextViewText(R.id.stat2_value, d.currency + String.format(Locale.US, "%,.0f", d.saved));
+            stat1Value = String.format(Locale.US, "%,d", d.avoided);
+            stat1Label = "NOT SMOKED";
+            stat2Value = money(d);
+            stat2Label = "SAVED";
         }
-        v.setTextViewText(R.id.stat1_label, "NOT SMOKED");
-        v.setTextViewText(R.id.stat2_label, "SAVED");
+        v.setTextViewText(R.id.stat1_value, stat1Value);
+        v.setTextViewText(R.id.stat1_label, stat1Label);
+        v.setTextViewText(R.id.stat2_value, stat2Value);
+        v.setTextViewText(R.id.stat2_label, stat2Label);
 
         v.setViewVisibility(R.id.stats_row, size == SIZE_SMALL ? View.GONE : View.VISIBLE);
         v.setViewVisibility(R.id.divider, size == SIZE_TALL || size == SIZE_LARGE ? View.VISIBLE : View.GONE);
@@ -365,7 +412,10 @@ public abstract class UnlitWidgetBase extends AppWidgetProvider {
             log.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
             PendingIntent logDialog = PendingIntent.getActivity(context, 1, log,
                     PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-            v.setOnClickPendingIntent(R.id.hero, logDialog);
+            // Only the count widgets log on a tap; the time and money heroes
+            // just open the app.
+            boolean tappingLogs = mode == MODE_DAYS || mode == MODE_AVOIDED;
+            v.setOnClickPendingIntent(R.id.hero, tappingLogs || openApp == null ? logDialog : openApp);
             v.setOnClickPendingIntent(R.id.widget_root, openApp != null ? openApp : logDialog);
         } catch (Throwable ignored) {
             // Tapping does nothing rather than crashing the launcher.
@@ -412,6 +462,32 @@ public class ClockWidgetProvider extends UnlitWidgetBase {
 }
 EOF
 sed -i "s/__APP_ID__/$APP_ID/g" "$PKG_DIR/ClockWidgetProvider.java"
+
+cat > "$PKG_DIR/MoneyWidgetProvider.java" <<'EOF'
+package __APP_ID__;
+
+/** 2x2..4x4 widget whose hero is the money saved since the quit date. */
+public class MoneyWidgetProvider extends UnlitWidgetBase {
+    @Override
+    protected int mode() {
+        return MODE_MONEY;
+    }
+}
+EOF
+sed -i "s/__APP_ID__/$APP_ID/g" "$PKG_DIR/MoneyWidgetProvider.java"
+
+cat > "$PKG_DIR/AvoidedWidgetProvider.java" <<'EOF'
+package __APP_ID__;
+
+/** 2x2..4x4 widget whose hero is the cigarettes not smoked. */
+public class AvoidedWidgetProvider extends UnlitWidgetBase {
+    @Override
+    protected int mode() {
+        return MODE_AVOIDED;
+    }
+}
+EOF
+sed -i "s/__APP_ID__/$APP_ID/g" "$PKG_DIR/AvoidedWidgetProvider.java"
 
 # ---------------------------------------------------------------------------
 # Native "how many?" dialog. A widget cannot host an EditText, so the number
@@ -973,6 +1049,40 @@ cat > "$MAIN/res/xml/clock_widget_info.xml" <<'EOF'
     android:description="@string/widget_clock_description" />
 EOF
 
+cat > "$MAIN/res/xml/money_widget_info.xml" <<'EOF'
+<?xml version="1.0" encoding="utf-8"?>
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="110dp"
+    android:minHeight="110dp"
+    android:minResizeWidth="110dp"
+    android:minResizeHeight="110dp"
+    android:targetCellWidth="2"
+    android:targetCellHeight="2"
+    android:updatePeriodMillis="1800000"
+    android:initialLayout="@layout/widget_small"
+    android:previewLayout="@layout/widget_small"
+    android:resizeMode="horizontal|vertical"
+    android:widgetCategory="home_screen"
+    android:description="@string/widget_money_description" />
+EOF
+
+cat > "$MAIN/res/xml/avoided_widget_info.xml" <<'EOF'
+<?xml version="1.0" encoding="utf-8"?>
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="110dp"
+    android:minHeight="110dp"
+    android:minResizeWidth="110dp"
+    android:minResizeHeight="110dp"
+    android:targetCellWidth="2"
+    android:targetCellHeight="2"
+    android:updatePeriodMillis="1800000"
+    android:initialLayout="@layout/widget_small"
+    android:previewLayout="@layout/widget_small"
+    android:resizeMode="horizontal|vertical"
+    android:widgetCategory="home_screen"
+    android:description="@string/widget_avoided_description" />
+EOF
+
 cat > "$MAIN/res/values/widget_strings.xml" <<'EOF'
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
@@ -980,6 +1090,10 @@ cat > "$MAIN/res/values/widget_strings.xml" <<'EOF'
     <string name="widget_days_description">Smoke-free day count. Tap the number to log a cigarette.</string>
     <string name="widget_clock_name">Unlit time</string>
     <string name="widget_clock_description">Time since you quit, from minutes to days.</string>
+    <string name="widget_money_name">Unlit savings</string>
+    <string name="widget_money_description">Money saved since you quit.</string>
+    <string name="widget_avoided_name">Unlit not smoked</string>
+    <string name="widget_avoided_description">Cigarettes you have not smoked since you quit.</string>
     <style name="UnlitQuickLog" parent="@android:style/Theme.DeviceDefault.Dialog">
         <item name="android:windowBackground">@android:color/transparent</item>
         <item name="android:windowIsFloating">true</item>
@@ -1029,7 +1143,8 @@ sed -i "s/__APP_ID__/$APP_ID/g" "$PKG_DIR/MainActivity.java"
 
 MANIFEST="$MAIN/AndroidManifest.xml"
 
-# Drop the old single receiver, then add both widgets plus the dialog activity.
+# Drop any receiver from an earlier version, then add every widget plus the
+# dialog activity.
 python3 - "$MANIFEST" <<'PY'
 import re, sys
 path = sys.argv[1]
@@ -1039,7 +1154,7 @@ src = open(path, encoding='utf-8').read()
 # android:name attribute sits on its own line in the generated XML, so the
 # patterns have to allow newlines and other attributes between the tag and it.
 src = re.sub(
-    r'\s*<receiver\b[^>]*?android:name="\.(?:Quit|Days|Clock)WidgetProvider".*?</receiver>',
+    r'\s*<receiver\b[^>]*?android:name="\.[A-Za-z]*WidgetProvider".*?</receiver>',
     '', src, flags=re.S)
 src = re.sub(
     r'\s*<activity\b[^>]*?android:name="\.SmokeQuickLogActivity".*?(?:/>|</activity>)',
@@ -1070,6 +1185,32 @@ receivers = '''
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/clock_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name=".MoneyWidgetProvider"
+            android:exported="true"
+            android:label="@string/widget_money_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.unlit.app.REFRESH_WIDGET" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/money_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name=".AvoidedWidgetProvider"
+            android:exported="true"
+            android:label="@string/widget_avoided_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.unlit.app.REFRESH_WIDGET" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/avoided_widget_info" />
         </receiver>
 
         <activity
