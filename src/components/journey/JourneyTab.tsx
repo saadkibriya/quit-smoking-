@@ -135,6 +135,135 @@ export const JourneyTab: React.FC<JourneyTabProps> = ({
     : sortedHistory.slice(0, 15);
 
   const earnedBadgeIds = new Set(badges.map((b) => b.milestoneId));
+  const tracksSmoke = (
+    plan.targets && plan.targets.length > 0 ? plan.targets : ['SMOKE']
+  ).includes('SMOKE');
+
+  // Someone tracking only porn/fap should not meet a wall of cigarette zeroes.
+  if (!tracksSmoke && fapStats) {
+    const fapEntries = [...entries]
+      .filter(
+        (e) => e.habitId === 'fap' || e.type === 'FAP' || e.type === 'FAP_URGE_BEATEN'
+      )
+      .sort((a, b) => b.timestamp - a.timestamp);
+    const bestClean =
+      fapStats.longestCleanHours >= 24
+        ? `${Math.floor(fapStats.longestCleanHours / 24)}d`
+        : `${Math.max(1, Math.floor(fapStats.longestCleanHours))}h`;
+
+    return (
+      <div className="w-full max-w-2xl mx-auto space-y-5 pb-24 px-4 pt-3">
+        <section className="p-5 rounded-3xl bg-[#F2F2F2] dark:bg-[#141414] border border-[#C4C4C4] dark:border-[#3D3D3D]">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-[#5E5E5E] dark:text-[#A6A6A6]">
+            Current clean streak
+          </span>
+          <div className="text-4xl font-black tabular-nums text-black dark:text-white mt-1">
+            {formatCleanTime(fapStats)}
+          </div>
+          <p className="text-[11px] font-medium text-[#5E5E5E] dark:text-[#A6A6A6] mt-1">
+            Best {bestClean} · {fapStats.totalLapses} slips all time
+          </p>
+
+          <div className="mt-4 grid grid-cols-3 gap-3">
+            {[
+              { label: 'Today', value: fapStats.todayLapses },
+              { label: 'This week', value: fapStats.weekLapses },
+              { label: 'Urges beaten', value: fapUrgesBeaten },
+            ].map((item) => (
+              <div key={item.label}>
+                <span className="text-xl font-extrabold text-black dark:text-white tabular-nums">
+                  {item.value}
+                </span>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-[#5E5E5E] dark:text-[#A6A6A6]">
+                  {item.label}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="p-5 rounded-3xl bg-[#F2F2F2] dark:bg-[#141414] border border-[#C4C4C4] dark:border-[#3D3D3D]">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-bold text-black dark:text-white flex items-center gap-1.5">
+              <History className="w-4 h-4" />
+              <span>Fap log</span>
+            </h3>
+            <span className="text-[11px] font-semibold text-[#5E5E5E] dark:text-[#A6A6A6]">
+              {fapEntries.length} entries · tap to edit
+            </span>
+          </div>
+
+          {fapEntries.length === 0 ? (
+            <p className="text-xs text-[#5E5E5E] dark:text-[#A6A6A6] py-3 text-center">
+              Nothing logged yet. A slip restarts the timer; an urge ridden out is a win.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {fapEntries.slice(0, 30).map((e) => {
+                const d = new Date(e.timestamp);
+                const isUrge = e.type === 'FAP_URGE_BEATEN';
+                return (
+                  <div
+                    key={e.id}
+                    onClick={() => onEditEntry?.(e)}
+                    className="p-3 rounded-2xl bg-[#FFFFFF] dark:bg-[#000000] border border-[#C4C4C4] dark:border-[#3D3D3D] flex items-center justify-between text-xs cursor-pointer hover:border-black dark:hover:border-white transition"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <span
+                        className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-[10px] ${
+                          isUrge
+                            ? 'bg-black text-white dark:bg-white dark:text-black'
+                            : 'border border-[#D71921] text-[#D71921]'
+                        }`}
+                      >
+                        {isUrge ? '✓' : '•'}
+                      </span>
+                      <div>
+                        <span className="font-bold text-black dark:text-white block">
+                          {isUrge ? 'Urge ridden out' : 'Slip logged'}
+                        </span>
+                        <span className="text-[11px] text-[#5E5E5E] dark:text-[#A6A6A6]">
+                          {d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} ·{' '}
+                          {d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1" onClick={(ev) => ev.stopPropagation()}>
+                      {onEditEntry && (
+                        <button
+                          onClick={() => {
+                            Sound.tick();
+                            onEditEntry(e);
+                          }}
+                          className="p-1.5 rounded-lg text-[#5E5E5E] dark:text-[#A6A6A6] hover:text-black dark:hover:text-white transition"
+                          title="Edit entry"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                      {onDeleteEntry && (
+                        <button
+                          onClick={() => {
+                            Sound.tick();
+                            onDeleteEntry(e.id);
+                          }}
+                          className="p-1.5 rounded-lg text-[#5E5E5E] dark:text-[#A6A6A6] hover:text-red-500 transition"
+                          title="Delete entry"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-2xl mx-auto space-y-5 pb-24 px-4 pt-3">
