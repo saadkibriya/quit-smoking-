@@ -2,6 +2,27 @@
 
 All notable changes to Unlit are documented here per `infos.md` (Worker Rules) and `roadmap.md`.
 
+## [2026-11-21] — Fifth widget, faster start, smaller bundle
+
+### Added
+- **`Unlit clean` widget** for the porn/fap tracker: clean days as the hero (the clock under
+  a day), with slips logged and the day count underneath. It shares the same four size
+  layouts, light/dark theming and resize handling as the smoking widgets, and the gallery
+  only offers it once fap tracking is on.
+
+### Changed
+- **The Gemini SDK left the startup bundle.** Both client paths now `import()` it on demand,
+  only when a user has supplied their own API key: main JS 945 kB → 554 kB (−41%), with the
+  392 kB SDK split into a lazy chunk that most sessions never download.
+- Removed the `motion` dependency, which nothing imported.
+
+### Fixed
+- **Home-screen jank:** removed the 48 px blur filter and the endless drift animation from
+  the three background blobs, dropped `backdrop-filter` from every glass card (it re-blurred
+  the whole card on every scroll frame), made the 63 milestone-arch dots static, and stopped
+  the percentage counter from re-rendering the deck ~55 times on open. The widget preview now
+  ticks once a second only while an undo countdown is running.
+
 ## [2026-11-21] — Second habit (porn/fap), theme and lag fixes
 
 ### Added

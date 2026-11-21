@@ -98,6 +98,16 @@ export default function App() {
         e.timestamp >= quitMs
     ).length;
 
+    // The fap widget counts lapses against its own start date.
+    const fapMs = new Date(plan.fapStartDate || plan.quitStartDate).getTime();
+    const fapSlips = entries.filter(
+      (e) =>
+        !e.undone &&
+        (e.habitId === 'fap' || e.type === 'FAP') &&
+        Number.isFinite(fapMs) &&
+        e.timestamp >= fapMs
+    ).length;
+
     void syncWidget({
       quitDate: plan.quitStartDate,
       cigsPerDay: plan.usualPerDay,
@@ -105,10 +115,13 @@ export default function App() {
       packCost: plan.packPrice,
       currency: plan.currency,
       loggedCigs,
+      fapStartDate: plan.fapStartDate || plan.quitStartDate,
+      fapSlips,
     });
   }, [
     entries,
     plan.quitStartDate,
+    plan.fapStartDate,
     plan.usualPerDay,
     plan.cigarettesPerPack,
     plan.packPrice,

@@ -1,4 +1,3 @@
-import { GoogleGenAI } from '@google/genai';
 import { UserPlan, HabitMode, CoachStyle, TimeToFirstCigarette } from '../types';
 
 export interface ParsedOnboardingPlan {
@@ -100,6 +99,8 @@ export async function parseOnboardingText(
 
   if (apiKey) {
     try {
+      // Loaded on demand: the SDK is ~300 kB and most sessions never use it.
+      const { GoogleGenAI } = await import('@google/genai');
       const ai = new GoogleGenAI({ apiKey });
       const prompt = `Extract quit-smoking onboarding parameters from this user description into strict JSON.
 User text: "${text}"

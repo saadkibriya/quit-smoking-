@@ -7,6 +7,7 @@ import {
   calculateRoundStatus,
 } from '../../domain/calculations';
 import { MILESTONES } from '../../content/milestones';
+import { formatCleanTime, getFapStats } from '../../domain/fap';
 import {
   X,
   Wind,
@@ -42,19 +43,25 @@ export const HomeScreenWidgetSimulator: React.FC<HomeScreenWidgetSimulatorProps>
 }) => {
   const [now, setNow] = useState(Date.now());
   const [viewMode, setViewMode] = useState<'launcher' | 'catalog'>('launcher');
-  const [activeLauncherWidget, setActiveLauncherWidget] = useState<'w1' | 'w4' | 'w5' | 'w6' | 'w7' | 'w8' | 'w9'>('w1');
+  const [activeLauncherWidget, setActiveLauncherWidget] = useState<
+    'w1' | 'w4' | 'w5' | 'w6' | 'w7' | 'w8' | 'w9' | 'clean'
+  >('w1');
   const [w1Size, setW1Size] = useState<'4x2' | '3x2' | '2x2'>('4x2');
   const [simulatedUndoUntil, setSimulatedUndoUntil] = useState<number | null>(null);
 
-  // Live ticking timer
+  // Live ticking timer — one second only while an undo countdown is running;
+  // everything else in the preview changes by the minute at most.
   useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), 1000);
+    const counting = simulatedUndoUntil !== null && Date.now() < simulatedUndoUntil;
+    const timer = setInterval(() => setNow(Date.now()), counting ? 1000 : 20000);
     return () => clearInterval(timer);
-  }, []);
+  }, [simulatedUndoUntil]);
 
   const stats = calculateStats(entries || [], plan, now);
   const smokeFree = calculateSmokeFreeDays(entries || [], plan.quitStartDate, now);
   const streak = stats.currentStreak;
+  const fap = getFapStats(entries || [], plan.fapStartDate || plan.quitStartDate, now);
+  const tracksFap = (plan.targets || []).includes('FAP');
   const round = calculateRoundStatus(streak.totalHours, smokeFree.completedSmokeFreeDays, entries || [], now);
 
   const safeMilestones = MILESTONES && MILESTONES.length > 0 ? MILESTONES : [];
@@ -112,7 +119,7 @@ export const HomeScreenWidgetSimulator: React.FC<HomeScreenWidgetSimulatorProps>
               </h3>
             </div>
             <p className="text-[11px] text-[#5E5E5E] dark:text-[#8A8A8A]">
-              A preview of the four widgets that install with Unlit
+              A preview of the widgets that install with Unlit
             </p>
           </div>
           <button
@@ -174,6 +181,7 @@ export const HomeScreenWidgetSimulator: React.FC<HomeScreenWidgetSimulatorProps>
                   { id: 'w4', label: 'Days 2×2' },
                   { id: 'w5', label: 'Time' },
                   { id: 'w6', label: 'Savings' },
+                  ...(tracksFap ? [{ id: 'clean', label: 'Clean' }] : []),
                 ].map((w) => (
                   <button
                     key={w.id}
@@ -383,6 +391,34 @@ export const HomeScreenWidgetSimulator: React.FC<HomeScreenWidgetSimulatorProps>
                   </div>
                 )}
 
+                {/* Clean: the porn/fap tracker's own widget */}
+                {activeLauncherWidget === 'clean' && (
+                  <div
+                    onClick={() => onDeepLink('today')}
+                    className="p-4 rounded-3xl bg-[#000000] border border-[#2A2A2A] text-white cursor-pointer hover:border-white transition select-none shadow-lg"
+                  >
+                    <div className="flex items-center justify-between text-[10px] font-mono tracking-widest uppercase text-[#8A8A8A]">
+                      <span>PORN / FAP</span>
+                      <span>CLEAN</span>
+                    </div>
+                    <div className="my-1 flex items-baseline gap-2">
+                      <span className="font-doto font-black text-4xl sm:text-5xl text-white tracking-tight">
+                        {fap.cleanDays}
+                      </span>
+                      <span className="text-sm font-bold text-[#8A8A8A] font-mono uppercase tracking-wider">
+                        DAYS CLEAN
+                      </span>
+                    </div>
+                    <div className="text-xs font-mono font-bold text-white tracking-wider tabular-nums">
+                      {formatCleanTime(fap)}
+                    </div>
+                    <div className="mt-3 pt-3 border-t border-[#1C1C1C] flex items-center justify-between text-[11px] font-mono text-[#8A8A8A]">
+                      <span>{fap.totalLapses} slips logged</span>
+                      <span>{fap.weekLapses} this week</span>
+                    </div>
+                  </div>
+                )}
+
                 {/* W7: Milestone 4x2 */}
                 {activeLauncherWidget === 'w7' && (
                   <div
@@ -557,7 +593,7 @@ export const HomeScreenWidgetSimulator: React.FC<HomeScreenWidgetSimulatorProps>
           <div className="flex-1 overflow-y-auto space-y-4 pr-1">
             <div className="flex items-center justify-between shrink-0">
               <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#5E5E5E] dark:text-[#8A8A8A]">
-                Four widgets · every one resizable
+                {tracksFap ? 'Five' : 'Four'} widgets · every one resizable
               </span>
             </div>
 
@@ -604,11 +640,21 @@ export const HomeScreenWidgetSimulator: React.FC<HomeScreenWidgetSimulatorProps>
             </div>
 
             <div className="p-4 rounded-3xl bg-[#000000] border border-[#2A2A2A] space-y-2">
+              <span className="font-bold text-xs block">Clean days (porn / fap)</span>
+              <p className="text-[11px] text-[#8A8A8A]">
+                For the second habit: {fap.cleanDays} days clean, {fap.totalLapses} slips logged.{' '}
+                {tracksFap
+                  ? 'It is in your widget list as “Unlit clean”.'
+                  : 'Turn on porn / fap tracking in Settings to use it.'}
+              </p>
+            </div>
+
+            <div className="p-4 rounded-3xl bg-[#000000] border border-[#2A2A2A] space-y-2">
               <span className="font-bold text-xs block">How to add them</span>
               <ol className="list-decimal list-inside space-y-1 text-[11px] text-[#8A8A8A]">
                 <li>Long-press an empty spot on your home screen.</li>
                 <li>Tap Widgets, then open Unlit.</li>
-                <li>Drag out Days, Time, Savings or Not smoked, then resize it.</li>
+                <li>Drag out Days, Time, Savings, Not smoked or Clean, then resize it.</li>
               </ol>
             </div>
           </div>

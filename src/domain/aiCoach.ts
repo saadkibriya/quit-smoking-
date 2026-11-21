@@ -1,4 +1,3 @@
-import { GoogleGenAI } from '@google/genai';
 import { UserPlan, Entry, ChatMessage } from '../types';
 
 export interface CoachResponse {
@@ -72,6 +71,8 @@ export async function askGeminiCoach(params: {
   // 3. Direct client-side Gemini if API key is present
   if (apiKey) {
     try {
+      // Loaded on demand: the SDK is ~300 kB and most sessions never use it.
+      const { GoogleGenAI } = await import('@google/genai');
       const ai = new GoogleGenAI({ apiKey });
       const systemInstruction = `You are the empathetic, doctor-backed, and proactive AI coach inside the Unlit quit-smoking app.
 Your goals:

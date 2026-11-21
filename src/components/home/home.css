@@ -86,19 +86,16 @@
 
 /* ---------- Surfaces ---------- */
 
+/*
+ * Frosted look without `backdrop-filter`: blurring every card, on every scroll
+ * frame, is what made the home screen stutter on mid-range Android phones. A
+ * near-opaque tint reads the same over the soft background and costs nothing.
+ */
 .home-glass {
-  background: rgba(255, 255, 255, 0.9); /* fallback where backdrop-filter is unsupported */
+  background: rgba(255, 255, 255, 0.92);
   border: 1px solid var(--card-border);
   border-radius: 28px;
   box-shadow: var(--card-shadow);
-}
-
-@supports ((-webkit-backdrop-filter: blur(2px)) or (backdrop-filter: blur(2px))) {
-  .home-glass {
-    background: var(--card);
-    -webkit-backdrop-filter: blur(10px) saturate(140%);
-    backdrop-filter: blur(10px) saturate(140%);
-  }
 }
 
 /*
@@ -193,37 +190,20 @@
   }
 }
 
-@keyframes home-float {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-6px);
-  }
-}
-
-@keyframes home-drift {
-  0%,
-  100% {
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-  50% {
-    transform: translate3d(14px, -22px, 0) scale(1.08);
-  }
-}
-
 .home-rise {
   animation: home-rise 620ms var(--spring) both;
 }
 
+/*
+ * The blobs are already soft radial gradients, so the 48px blur filter and the
+ * endless drift animations were pure GPU cost — three full-screen layers
+ * repainting forever behind the content. Static, un-blurred, still soft.
+ */
 .home-blob {
   position: absolute;
   border-radius: 9999px;
-  filter: blur(48px);
   pointer-events: none;
   z-index: 0;
-  will-change: transform;
 }
 
 .home-blob-green {
@@ -232,7 +212,6 @@
   top: -60px;
   left: -70px;
   background: radial-gradient(circle at 40% 40%, rgba(34, 197, 94, 0.3), rgba(34, 197, 94, 0));
-  animation: home-drift 26s ease-in-out infinite;
 }
 
 .home-blob-blue {
@@ -241,7 +220,6 @@
   top: 118px;
   right: -90px;
   background: radial-gradient(circle at 55% 45%, rgba(14, 165, 233, 0.26), rgba(14, 165, 233, 0));
-  animation: home-drift 34s ease-in-out infinite reverse;
 }
 
 .home-blob-mint {
@@ -250,7 +228,6 @@
   bottom: -70px;
   left: 12%;
   background: radial-gradient(circle at 50% 50%, rgba(34, 197, 94, 0.18), rgba(34, 197, 94, 0));
-  animation: home-drift 30s ease-in-out infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -259,7 +236,6 @@
   }
 
   .home-rise,
-  .home-root [style*='home-float'],
   .home-root [style*='home-dot-pop'] {
     animation: none !important;
   }

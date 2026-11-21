@@ -64,6 +64,7 @@ public abstract class UnlitWidgetBase extends AppWidgetProvider {
     static final int MODE_CLOCK = 1;
     static final int MODE_MONEY = 2;
     static final int MODE_AVOIDED = 3;
+    static final int MODE_CLEAN = 4;
 
     static final int SIZE_SMALL = 0;
     static final int SIZE_TALL = 1;
@@ -103,6 +104,7 @@ public abstract class UnlitWidgetBase extends AppWidgetProvider {
             updateAll(app, manager, manager.getAppWidgetIds(new ComponentName(app, ClockWidgetProvider.class)), MODE_CLOCK);
             updateAll(app, manager, manager.getAppWidgetIds(new ComponentName(app, MoneyWidgetProvider.class)), MODE_MONEY);
             updateAll(app, manager, manager.getAppWidgetIds(new ComponentName(app, AvoidedWidgetProvider.class)), MODE_AVOIDED);
+            updateAll(app, manager, manager.getAppWidgetIds(new ComponentName(app, CleanWidgetProvider.class)), MODE_CLEAN);
         } catch (Throwable ignored) {
             // Never let a widget failure break the caller.
         }
@@ -215,6 +217,14 @@ public abstract class UnlitWidgetBase extends AppWidgetProvider {
         long avoided;
         double saved;
         String since = "";
+
+        // Porn/fap tracker (the "Unlit clean" widget).
+        long fapQuit;
+        long fapSlips;
+        long fapElapsed;
+        long fapDays;
+        String fapShort = "";
+        String fapSince = "";
     }
 
     private static Data read(Context context) {
@@ -226,6 +236,8 @@ public abstract class UnlitWidgetBase extends AppWidgetProvider {
             d.packSize = parseDouble(sp.getString("unlit_pack_size", ""), 20);
             d.packCost = parseDouble(sp.getString("unlit_pack_cost", ""), 0);
             d.logged = parseLong(sp.getString("unlit_logged_total", ""), 0L);
+            d.fapQuit = parseLong(sp.getString("unlit_fap_start", ""), 0L);
+            d.fapSlips = parseLong(sp.getString("unlit_fap_slips", ""), 0L);
             String cur = sp.getString("unlit_currency", "\u09F3");
             if (cur != null && cur.length() > 0) d.currency = cur;
         } catch (Throwable ignored) {
@@ -245,6 +257,22 @@ public abstract class UnlitWidgetBase extends AppWidgetProvider {
                 d.since = new SimpleDateFormat("MMM d", Locale.US).format(new Date(d.quit)).toUpperCase(Locale.US);
             } catch (Throwable ignored) {
                 d.since = "";
+            }
+        }
+
+        if (d.fapQuit > 0L) {
+            d.fapElapsed = Math.max(0L, System.currentTimeMillis() - d.fapQuit);
+            d.fapDays = d.fapElapsed / 86400000L;
+            long fh = (d.fapElapsed % 86400000L) / 3600000L;
+            long fm = (d.fapElapsed % 3600000L) / 60000L;
+            if (d.fapElapsed >= 86400000L) d.fapShort = d.fapDays + "d " + fh + "h";
+            else if (d.fapElapsed >= 3600000L) d.fapShort = fh + "h " + two(fm) + "m";
+            else d.fapShort = fm + "m";
+            try {
+                d.fapSince = new SimpleDateFormat("MMM d", Locale.US)
+                        .format(new Date(d.fapQuit)).toUpperCase(Locale.US);
+            } catch (Throwable ignored) {
+                d.fapSince = "";
             }
         }
         return d;
@@ -318,7 +346,25 @@ public abstract class UnlitWidgetBase extends AppWidgetProvider {
         String sub;
         String hint;
 
-        if (d.quit <= 0L) {
+        if (mode == MODE_CLEAN) {
+            if (d.fapQuit <= 0L) {
+                hero = "--";
+                label = "PORN / FAP";
+                sub = "OPEN THE APP TO SET UP";
+                hint = "";
+            } else if (d.fapDays < 1L) {
+                // Under a day the clock is the honest number.
+                hero = d.fapShort;
+                label = "CLEAN FOR";
+                sub = "SINCE " + d.fapSince;
+                hint = "TAP TO OPEN UNLIT";
+            } else {
+                hero = String.valueOf(d.fapDays);
+                label = d.fapDays == 1L ? "DAY CLEAN" : "DAYS CLEAN";
+                sub = d.fapShort + "  \u00B7  SINCE " + d.fapSince;
+                hint = "TAP TO OPEN UNLIT";
+            }
+        } else if (d.quit <= 0L) {
             hero = "--";
             label = "UNLIT";
             sub = "OPEN THE APP TO SET UP";
@@ -369,7 +415,13 @@ public abstract class UnlitWidgetBase extends AppWidgetProvider {
         String stat1Label;
         String stat2Value;
         String stat2Label;
-        if (d.quit <= 0L) {
+        if (mode == MODE_CLEAN) {
+            boolean set = d.fapQuit > 0L;
+            stat1Value = set ? String.valueOf(d.fapSlips) : "--";
+            stat1Label = "SLIPS LOGGED";
+            stat2Value = set ? String.valueOf(d.fapDays) : "--";
+            stat2Label = d.fapDays == 1L ? "DAY CLEAN" : "DAYS CLEAN";
+        } else if (d.quit <= 0L) {
             stat1Value = "--";
             stat1Label = "NOT SMOKED";
             stat2Value = "--";
@@ -488,6 +540,19 @@ public class AvoidedWidgetProvider extends UnlitWidgetBase {
 }
 EOF
 sed -i "s/__APP_ID__/$APP_ID/g" "$PKG_DIR/AvoidedWidgetProvider.java"
+
+cat > "$PKG_DIR/CleanWidgetProvider.java" <<'EOF'
+package __APP_ID__;
+
+/** 2x2..4x4 widget whose hero is the porn/fap clean-day count. */
+public class CleanWidgetProvider extends UnlitWidgetBase {
+    @Override
+    protected int mode() {
+        return MODE_CLEAN;
+    }
+}
+EOF
+sed -i "s/__APP_ID__/$APP_ID/g" "$PKG_DIR/CleanWidgetProvider.java"
 
 # ---------------------------------------------------------------------------
 # Native "how many?" dialog. A widget cannot host an EditText, so the number
@@ -1083,6 +1148,23 @@ cat > "$MAIN/res/xml/avoided_widget_info.xml" <<'EOF'
     android:description="@string/widget_avoided_description" />
 EOF
 
+cat > "$MAIN/res/xml/clean_widget_info.xml" <<'EOF'
+<?xml version="1.0" encoding="utf-8"?>
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="110dp"
+    android:minHeight="110dp"
+    android:minResizeWidth="110dp"
+    android:minResizeHeight="110dp"
+    android:targetCellWidth="2"
+    android:targetCellHeight="2"
+    android:updatePeriodMillis="1800000"
+    android:initialLayout="@layout/widget_small"
+    android:previewLayout="@layout/widget_small"
+    android:resizeMode="horizontal|vertical"
+    android:widgetCategory="home_screen"
+    android:description="@string/widget_clean_description" />
+EOF
+
 cat > "$MAIN/res/values/widget_strings.xml" <<'EOF'
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
@@ -1094,6 +1176,8 @@ cat > "$MAIN/res/values/widget_strings.xml" <<'EOF'
     <string name="widget_money_description">Money saved since you quit.</string>
     <string name="widget_avoided_name">Unlit not smoked</string>
     <string name="widget_avoided_description">Cigarettes you have not smoked since you quit.</string>
+    <string name="widget_clean_name">Unlit clean</string>
+    <string name="widget_clean_description">Days clean from porn / fap, with the slips you logged.</string>
     <style name="UnlitQuickLog" parent="@android:style/Theme.DeviceDefault.Dialog">
         <item name="android:windowBackground">@android:color/transparent</item>
         <item name="android:windowIsFloating">true</item>
@@ -1211,6 +1295,19 @@ receivers = '''
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/avoided_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name=".CleanWidgetProvider"
+            android:exported="true"
+            android:label="@string/widget_clean_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.unlit.app.REFRESH_WIDGET" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/clean_widget_info" />
         </receiver>
 
         <activity

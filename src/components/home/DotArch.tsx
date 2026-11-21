@@ -87,11 +87,6 @@ export const DotArch: React.FC<DotArchProps> = ({ progress, caption }) => {
               cy={dot.y}
               r={dot.r}
               fill={filled ? color : 'rgba(11, 27, 43, 0.1)'}
-              style={{
-                transformOrigin: `${dot.x}px ${dot.y}px`,
-                animation: 'home-dot-pop 520ms var(--spring) both',
-                animationDelay: `${dot.index * 11}ms`,
-              }}
             />
           );
         })}

@@ -15,9 +15,14 @@ export async function syncWidget(d: {
   currency?: string;
   /** Cigarettes actually logged since the quit date, so the widget can net them out. */
   loggedCigs?: number;
+  /** Porn/fap streak anchor and lapse count, used by the "Unlit clean" widget. */
+  fapStartDate?: string | number | Date;
+  fapSlips?: number;
 }): Promise<void> {
   const quitMs = new Date(d.quitDate).getTime();
   if (!Number.isFinite(quitMs)) return;
+
+  const fapMs = d.fapStartDate === undefined ? 0 : new Date(d.fapStartDate).getTime();
 
   try {
     await Promise.all([
@@ -27,6 +32,8 @@ export async function syncWidget(d: {
       Preferences.set({ key: 'unlit_pack_cost', value: String(d.packCost) }),
       Preferences.set({ key: 'unlit_currency', value: d.currency ?? '৳' }),
       Preferences.set({ key: 'unlit_logged_total', value: String(d.loggedCigs ?? 0) }),
+      Preferences.set({ key: 'unlit_fap_start', value: String(Number.isFinite(fapMs) ? fapMs : 0) }),
+      Preferences.set({ key: 'unlit_fap_slips', value: String(d.fapSlips ?? 0) }),
     ]);
   } catch {
     // Not running inside the native shell, or the plugin is unavailable.

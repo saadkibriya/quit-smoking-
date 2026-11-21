@@ -19,7 +19,6 @@ export const BubbleStat: React.FC<BubbleStatProps> = ({
   value,
   ratio,
   tone = 'blue',
-  delayMs = 0,
   caption,
 }) => {
   const size = 28 + Math.round(Math.min(1, Math.max(0.18, ratio)) * 40);
@@ -36,12 +35,7 @@ export const BubbleStat: React.FC<BubbleStatProps> = ({
       <div className="my-2 flex flex-1 items-center justify-center gap-2">
         <span
           className="rounded-full"
-          style={{
-            width: 16,
-            height: 16,
-            background: soft,
-            animation: `home-float 5.2s ease-in-out ${delayMs}ms infinite`,
-          }}
+          style={{ width: 16, height: 16, background: soft }}
           aria-hidden="true"
         />
         <span
@@ -51,7 +45,6 @@ export const BubbleStat: React.FC<BubbleStatProps> = ({
             height: size,
             background: `radial-gradient(circle at 32% 28%, rgba(255,255,255,0.85), ${color} 62%)`,
             boxShadow: `0 10px 24px ${color}33`,
-            animation: `home-float 6.6s ease-in-out ${delayMs + 400}ms infinite`,
           }}
           aria-hidden="true"
         />

@@ -55,16 +55,18 @@ function useCountUp(target: number, durationMs = 900): number {
       return;
     }
 
-    let frame = 0;
-    const start = performance.now();
-    const step = (now: number) => {
-      const t = Math.min(1, (now - start) / durationMs);
-      const eased = 1 - Math.pow(1 - t, 3);
+    // Twelve steps instead of one state update per animation frame: the number
+    // still counts up, but the whole deck re-renders a dozen times, not ~55.
+    const steps = 12;
+    const interval = Math.max(30, Math.round(durationMs / steps));
+    let step = 0;
+    const timer = window.setInterval(() => {
+      step += 1;
+      const eased = 1 - Math.pow(1 - step / steps, 3);
       setValue(Math.round(target * eased));
-      if (t < 1) frame = window.requestAnimationFrame(step);
-    };
-    frame = window.requestAnimationFrame(step);
-    return () => window.cancelAnimationFrame(frame);
+      if (step >= steps) window.clearInterval(timer);
+    }, interval);
+    return () => window.clearInterval(timer);
   }, [target, durationMs]);
 
   return value;
