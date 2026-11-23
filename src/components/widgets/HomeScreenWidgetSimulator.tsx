@@ -413,7 +413,7 @@ export const HomeScreenWidgetSimulator: React.FC<HomeScreenWidgetSimulatorProps>
                       {formatCleanTime(fap)}
                     </div>
                     <div className="mt-3 pt-3 border-t border-[#1C1C1C] flex items-center justify-between text-[11px] font-mono text-[#8A8A8A]">
-                      <span>{fap.totalLapses} slips logged</span>
+                      <span>{fap.totalLapses === 1 ? '1 slip' : `${fap.totalLapses} slips`} logged</span>
                       <span>{fap.weekLapses} this week</span>
                     </div>
                   </div>

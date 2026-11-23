@@ -1,4 +1,5 @@
 import { UserPlan, Entry, ChatMessage } from '../types';
+import { isCravingResistedEvent, isSmokeEvent } from './calculations';
 
 export interface CoachResponse {
   reply: string;
@@ -47,8 +48,8 @@ export async function askGeminiCoach(params: {
   const streakMs = Math.max(0, now - quitDate.getTime());
   const streakHours = Math.round(streakMs / (1000 * 3600));
   const streakDays = Math.floor(streakHours / 24);
-  const totalCigsLogged = entries.filter((e) => e.type === 'CIGARETTE').length;
-  const totalCravingsBeaten = entries.filter((e) => e.type === 'CRAVING_BEATEN').length;
+  const totalCigsLogged = entries.filter(isSmokeEvent).length;
+  const totalCravingsBeaten = entries.filter(isCravingResistedEvent).length;
 
   const dataSummary = {
     planMode: plan.mode,

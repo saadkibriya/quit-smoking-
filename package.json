@@ -10,7 +10,7 @@
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
-    "test": "tsx test/calculations.test.ts && tsx test/pacing.test.ts",
+    "test": "tsx test/calculations.test.ts && tsx test/pacing.test.ts && tsx test/regressions.test.ts",
     "icons": "node scripts/generate-icons.mjs"
   },
   "dependencies": {

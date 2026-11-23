@@ -12,6 +12,8 @@ import {
   calculateAverageCravingLength,
   calculateCutDownLimitToday,
   groupEntriesByDay,
+  isCravingResistedEvent,
+  isSmokeEvent,
   toLocalDateString,
 } from '../../domain/calculations';
 import { getNormalGuideForDay } from '../../content/withdrawalGuide';
@@ -69,7 +71,7 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
   const money = calculateMoneyKept(avoided, plan);
   const life = calculateLifeRegained(avoided);
   const round = calculateRoundStatus(streak.streakHours, smokeFree.completedSmokeFreeDays, entries, now);
-  const cravingsBeaten = entries.filter((e) => e.type === 'CRAVING_BEATEN').length;
+  const cravingsBeaten = entries.filter(isCravingResistedEvent).length;
   const avgCraving = calculateAverageCravingLength(entries);
   const guide = getNormalGuideForDay(smokeFree.completedSmokeFreeDays);
 
@@ -163,7 +165,7 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
           : plan.usualPerDay;
 
       const lastCig = entries
-        .filter((e) => e.type === 'CIGARETTE')
+        .filter(isSmokeEvent)
         .sort((a, b) => b.timestamp - a.timestamp)[0];
       const minutesSinceLast = lastCig ? Math.floor((now - lastCig.timestamp) / 60000) : null;
 

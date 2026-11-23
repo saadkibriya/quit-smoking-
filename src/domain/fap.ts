@@ -21,7 +21,11 @@ export interface FapStats {
 }
 
 export function isFapLapse(entry: Entry): boolean {
-  return !entry.undone && (entry.habitId === 'fap' || entry.type === 'FAP');
+  if (entry.undone) return false;
+  // An urge ridden out is the opposite of a slip: it must never reset the timer
+  // or show up in the slip counts (it also carries habitId 'fap').
+  if (entry.type === 'FAP_URGE_BEATEN') return false;
+  return entry.type === 'FAP' || entry.habitId === 'fap';
 }
 
 export function isFapUrgeBeaten(entry: Entry): boolean {
@@ -75,19 +79,35 @@ export function getFapStats(entries: Entry[], startDate: string, now = Date.now(
   };
 }
 
+/** "3d 4h", "5h 12m", "42m" — any duration, not just a streak. */
+export function formatDuration(ms: number): string {
+  const safe = Math.max(0, ms);
+  const days = Math.floor(safe / DAY_MS);
+  const hours = Math.floor((safe % DAY_MS) / 3600000);
+  const minutes = Math.floor((safe % 3600000) / 60000);
+  if (safe >= DAY_MS) return `${days}d ${hours}h`;
+  if (safe >= 3600000) return `${hours}h ${String(minutes).padStart(2, '0')}m`;
+  return `${minutes}m`;
+}
+
+/** "3d 4h 05m" — the long form used in supporting lines. */
+export function formatDurationLong(ms: number): string {
+  const safe = Math.max(0, ms);
+  const days = Math.floor(safe / DAY_MS);
+  const hours = Math.floor((safe % DAY_MS) / 3600000);
+  const minutes = Math.floor((safe % 3600000) / 60000);
+  if (safe >= DAY_MS) return `${days}d ${hours}h ${String(minutes).padStart(2, '0')}m`;
+  if (safe >= 3600000) return `${hours}h ${String(minutes).padStart(2, '0')}m`;
+  return `${minutes}m`;
+}
+
 /** "3d 4h", "5h 12m", "42m" — the clean-streak hero. */
 export function formatCleanTime(stats: FapStats): string {
-  if (stats.cleanMs >= DAY_MS) return `${stats.cleanDays}d ${stats.cleanHours}h`;
-  if (stats.cleanMs >= 3600000) return `${stats.cleanHours}h ${String(stats.cleanMinutes).padStart(2, '0')}m`;
-  return `${stats.cleanMinutes}m`;
+  return formatDuration(stats.cleanMs);
 }
 
 export function formatCleanTimeLong(stats: FapStats): string {
-  if (stats.cleanMs >= DAY_MS) {
-    return `${stats.cleanDays}d ${stats.cleanHours}h ${String(stats.cleanMinutes).padStart(2, '0')}m`;
-  }
-  if (stats.cleanMs >= 3600000) return `${stats.cleanHours}h ${String(stats.cleanMinutes).padStart(2, '0')}m`;
-  return `${stats.cleanMinutes}m`;
+  return formatDurationLong(stats.cleanMs);
 }
 
 /** Count of urges ridden out in the last `days` days. */

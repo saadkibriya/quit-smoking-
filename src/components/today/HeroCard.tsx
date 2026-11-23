@@ -5,6 +5,7 @@ import {
   calculateRoundStatus,
   calculateCutDownLimitToday,
   calculateSmokeFreeDays,
+  isSmokeEvent,
   toLocalDateString,
 } from '../../domain/calculations';
 import { Clock, CheckCircle2, AlertCircle, ArrowRight, ShieldCheck } from 'lucide-react';
@@ -86,7 +87,7 @@ export const HeroCard: React.FC<HeroCardProps> = ({ plan, entries, onOpenMilesto
   if (plan.mode === 'CUT_DOWN') {
     const todayStr = toLocalDateString(now);
     const todayCigs = entries.filter(
-      (e) => e.type === 'CIGARETTE' && toLocalDateString(e.timestamp) === todayStr
+      (e) => isSmokeEvent(e) && toLocalDateString(e.timestamp) === todayStr
     ).length;
 
     const cutDown = calculateCutDownLimitToday(
@@ -99,7 +100,7 @@ export const HeroCard: React.FC<HeroCardProps> = ({ plan, entries, onOpenMilesto
     );
 
     const cigEntries = entries
-      .filter((e) => e.type === 'CIGARETTE')
+      .filter(isSmokeEvent)
       .sort((a, b) => b.timestamp - a.timestamp);
     const lastCig = cigEntries[0];
     const minutesSinceLast = lastCig ? Math.floor((now - lastCig.timestamp) / 60000) : null;
@@ -169,10 +170,10 @@ export const HeroCard: React.FC<HeroCardProps> = ({ plan, entries, onOpenMilesto
     const yesterdayStr = toLocalDateString(now - 86400000);
 
     const todayCount = entries.filter(
-      (e) => e.type === 'CIGARETTE' && toLocalDateString(e.timestamp) === todayStr
+      (e) => isSmokeEvent(e) && toLocalDateString(e.timestamp) === todayStr
     ).length;
     const yesterdayCount = entries.filter(
-      (e) => e.type === 'CIGARETTE' && toLocalDateString(e.timestamp) === yesterdayStr
+      (e) => isSmokeEvent(e) && toLocalDateString(e.timestamp) === yesterdayStr
     ).length;
 
     return (

@@ -350,14 +350,14 @@ export function calculatePeriodComparison(
     if (currentDaysList.includes(dStr)) {
       if (!currentMap.has(dStr)) currentMap.set(dStr, { cigs: 0, beaten: 0 });
       const item = currentMap.get(dStr)!;
-      if (e.type === 'CIGARETTE') item.cigs += 1;
-      else if (e.type === 'CRAVING_BEATEN') item.beaten += 1;
+      if (isSmokeEvent(e)) item.cigs += 1;
+      else if (isCravingResistedEvent(e)) item.beaten += 1;
     }
     if (previousDaysList.includes(dStr)) {
       if (!previousMap.has(dStr)) previousMap.set(dStr, { cigs: 0, beaten: 0 });
       const item = previousMap.get(dStr)!;
-      if (e.type === 'CIGARETTE') item.cigs += 1;
-      else if (e.type === 'CRAVING_BEATEN') item.beaten += 1;
+      if (isSmokeEvent(e)) item.cigs += 1;
+      else if (isCravingResistedEvent(e)) item.beaten += 1;
     }
   }
 
@@ -418,7 +418,7 @@ export function calculateToughestHours(
   let maxCount = 0;
 
   for (const e of entries) {
-    if (e.timestamp >= cutoff && (e.type === 'CIGARETTE' || e.type === 'CRAVING_BEATEN')) {
+    if (e.timestamp >= cutoff && (isSmokeEvent(e) || isCravingResistedEvent(e))) {
       const d = new Date(e.timestamp);
       const dow = d.getDay();
       const hour = d.getHours();
@@ -441,7 +441,7 @@ export function calculateAverageCravingLength(entries: Entry[]): {
   totalLoggedWithDuration: number;
 } {
   const durations = entries
-    .filter((e) => e.type === 'CRAVING_BEATEN' && typeof e.cravingDurationSeconds === 'number' && e.cravingDurationSeconds > 0)
+    .filter((e) => isCravingResistedEvent(e) && typeof e.cravingDurationSeconds === 'number' && e.cravingDurationSeconds > 0)
     .map((e) => e.cravingDurationSeconds!)
     .sort((a, b) => a - b);
 
@@ -591,7 +591,7 @@ export function calculateAverageTimeBetweenCigarettes(entries: Entry[]): {
   totalIntervals: number;
 } {
   const cigEntries = entries
-    .filter((e) => e.type === 'CIGARETTE')
+    .filter(isSmokeEvent)
     .sort((a, b) => a.timestamp - b.timestamp);
 
   if (cigEntries.length < 2) {
@@ -632,7 +632,7 @@ export function calculateFirstCigaretteOfDayTrend(
   formatted: string;
   daysAnalyzed: number;
 } {
-  const cigEntries = entries.filter((e) => e.type === 'CIGARETTE');
+  const cigEntries = entries.filter(isSmokeEvent);
   if (cigEntries.length === 0) {
     return { averageMinutesAfterWake: null, formatted: 'No logs yet', daysAnalyzed: 0 };
   }

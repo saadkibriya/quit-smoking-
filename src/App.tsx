@@ -22,6 +22,7 @@ import { HomeScreen } from './components/home/HomeScreen';
 import { FapCard, FapHome } from './components/fap/FapCard';
 import './components/home/home.css';
 import { calculateCurrentStreak, calculateSmokeFreeDays, calculateRoundStatus } from './domain/calculations';
+import { getFapStats } from './domain/fap';
 import { syncWidget } from './widgetSync';
 import { drainWidgetLogs } from './widgetLogSync';
 import { MILESTONES } from './content/milestones';
@@ -98,15 +99,11 @@ export default function App() {
         e.timestamp >= quitMs
     ).length;
 
-    // The fap widget counts lapses against its own start date.
-    const fapMs = new Date(plan.fapStartDate || plan.quitStartDate).getTime();
-    const fapSlips = entries.filter(
-      (e) =>
-        !e.undone &&
-        (e.habitId === 'fap' || e.type === 'FAP') &&
-        Number.isFinite(fapMs) &&
-        e.timestamp >= fapMs
-    ).length;
+    // The fap widget shows the same clean streak as the app: a slip moves the
+    // anchor forward. Sending only the plan's start date made the widget keep
+    // counting after a slip; sending the effective anchor keeps them in sync.
+    const fap = getFapStats(entries, plan.fapStartDate || plan.quitStartDate);
+    const fapAnchor = Date.now() - fap.cleanMs;
 
     void syncWidget({
       quitDate: plan.quitStartDate,
@@ -115,8 +112,8 @@ export default function App() {
       packCost: plan.packPrice,
       currency: plan.currency,
       loggedCigs,
-      fapStartDate: plan.fapStartDate || plan.quitStartDate,
-      fapSlips,
+      fapStartDate: fapAnchor,
+      fapSlips: fap.totalLapses,
     });
   }, [
     entries,
@@ -216,8 +213,17 @@ export default function App() {
     return () => clearInterval(interval);
   }, [undoEntryId]);
 
-  // Milestone badge checker
+  // Which habits this person chose during onboarding. Older saves have none.
+  const targets = plan.targets && plan.targets.length > 0 ? plan.targets : ['SMOKE'];
+  const tracksSmoke = targets.includes('SMOKE');
+  const tracksFap = targets.includes('FAP');
+  const fapOnly = tracksFap && !tracksSmoke;
+
+  // Milestone badge checker. These milestones (and their celebration copy) are
+  // all about cigarettes, so someone tracking only porn/fap must not collect
+  // them the moment they open the app.
   useEffect(() => {
+    if (!tracksSmoke) return;
     const streak = calculateCurrentStreak(entries, plan.quitStartDate);
     for (const m of MILESTONES) {
       if (streak.streakHours >= m.hours) {
@@ -231,13 +237,7 @@ export default function App() {
         }
       }
     }
-  }, [entries, plan.quitStartDate, badges]);
-
-  // Which habits this person chose during onboarding. Older saves have none.
-  const targets = plan.targets && plan.targets.length > 0 ? plan.targets : ['SMOKE'];
-  const tracksSmoke = targets.includes('SMOKE');
-  const tracksFap = targets.includes('FAP');
-  const fapOnly = tracksFap && !tracksSmoke;
+  }, [entries, plan.quitStartDate, badges, tracksSmoke]);
 
   // Pace charts are cigarette-only, so a fap-only user must never sit on that tab.
   useEffect(() => {

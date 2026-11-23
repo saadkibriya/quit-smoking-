@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { UserPlan, Entry } from '../../types';
-import { calculateSmokeFreeDays, calculateMoneyKept, calculateAvoidedCigarettes } from '../../domain/calculations';
+import { calculateSmokeFreeDays, calculateMoneyKept, calculateAvoidedCigarettes, isSmokeEvent } from '../../domain/calculations';
 import { Sound } from '../../data/sound';
 import { Shield, Sparkles, Check, ArrowRight, RefreshCw, MessageSquare } from 'lucide-react';
 
@@ -32,7 +32,7 @@ export const SlipRecoverySheet: React.FC<SlipRecoverySheetProps> = ({
   const sevenDaysAgo = now - 7 * 86400 * 1000;
   const recentCigDays = new Set(
     entries
-      .filter((e) => e.type === 'CIGARETTE' && e.timestamp >= sevenDaysAgo)
+      .filter((e) => isSmokeEvent(e) && e.timestamp >= sevenDaysAgo)
       .map((e) => new Date(e.timestamp).toDateString())
   ).size;
 

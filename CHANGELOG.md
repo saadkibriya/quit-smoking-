@@ -2,6 +2,31 @@
 
 All notable changes to Unlit are documented here per `infos.md` (Worker Rules) and `roadmap.md`.
 
+## [2026-11-23] — Correct fap streaks and stats after undo
+
+### Fixed
+- **Riding out an urge no longer counts as a slip.** `FAP_URGE_BEATEN` entries carry
+  `habitId: 'fap'`, so the lapse filter swept them in: logging a win reset the clean timer,
+  raised the slip totals and showed up in the daily/weekly counts. Urges are now explicitly
+  excluded, and undone slips are ignored.
+- **The `Unlit clean` widget follows the timer again.** It was fed the plan's start date, so
+  after a slip the app reset but the widget kept counting from day one. It now receives the
+  effective streak anchor (the last slip) plus the true slip total.
+- **"Last slip … ago" showed the wrong duration.** The card reused the current streak's
+  day/hour fields with a swapped millisecond value, so a slip older than the streak could
+  read as the streak length. Durations are now formatted from the elapsed time itself.
+- **Undone entries no longer pollute statistics.** Weekly comparison, toughest hours, median
+  craving length, average spacing, first-cigarette trend, the cut-down/track hero counts,
+  slip-recovery history check, in-app widgets and the coach/report totals all skipped undone
+  entries only by accident; they now use the shared smoke/craving filters.
+- **Fap-only users no longer collect smoking milestones.** The badge/celebration loop is
+  gated to people who actually track smoking.
+- Slip counts read "1 slip" instead of "1 slips".
+
+### Added
+- `test/regressions.test.ts` with nine tests covering urge-vs-slip, undone entries, the
+  widget anchor and duration formatting.
+
 ## [2026-11-21] — Fifth widget, faster start, smaller bundle
 
 ### Added

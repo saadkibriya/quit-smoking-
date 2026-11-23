@@ -6,6 +6,8 @@ import {
   calculateMoneyKept,
   calculateLifeRegained,
   calculateDependenceScore,
+  isCravingResistedEvent,
+  isSmokeEvent,
   toLocalDateString,
 } from './calculations';
 
@@ -24,8 +26,8 @@ export function generateCharacterCertificateMarkdown(params: {
   const life = calculateLifeRegained(avoided);
   const depScore = calculateDependenceScore(plan.usualPerDay, plan.timeToFirstCigarette);
 
-  const totalCigsLogged = entries.filter((e) => e.type === 'CIGARETTE').length;
-  const totalCravingsBeaten = entries.filter((e) => e.type === 'CRAVING_BEATEN').length;
+  const totalCigsLogged = entries.filter(isSmokeEvent).length;
+  const totalCravingsBeaten = entries.filter(isCravingResistedEvent).length;
   const totalPledges = entries.filter((e) => e.type === 'PLEDGE').length;
 
   const quitStartLocal = new Date(plan.quitStartDate).toLocaleString(undefined, {

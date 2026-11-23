@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Entry, UserPlan } from '../../types';
-import { countUrgesBeaten, formatCleanTime, formatCleanTimeLong, getFapStats } from '../../domain/fap';
+import { countUrgesBeaten, formatCleanTime, formatDurationLong, getFapStats } from '../../domain/fap';
 import { FAP_URGE_TOOLS, FAP_WARNING_HINTS, FAP_WARNINGS } from '../../content/fapGuidance';
 import { GlassCard } from '../home/GlassCard';
 import { Plus, Settings2, ShieldAlert } from 'lucide-react';
@@ -91,7 +91,7 @@ export const FapCard: React.FC<FapCardProps> = ({
 
       <div className="home-body mt-3 text-[11px]">
         {stats.lastLapseAt
-          ? `Last slip ${formatCleanTimeLong({ ...stats, cleanMs: now - stats.lastLapseAt })} ago`
+          ? `Last slip ${formatDurationLong(now - stats.lastLapseAt)} ago`
           : 'No slips logged yet.'}{' '}
         &middot; Watch for {FAP_WARNING_HINTS.join(' \u00B7 ').toLowerCase()}
       </div>
@@ -194,7 +194,8 @@ export const FapHome: React.FC<FapHomeProps> = ({
           <span className="home-label">Current clean streak</span>
           <div className="home-num mt-2 text-[52px]">{formatCleanTime(stats)}</div>
           <div className="home-body mt-2 text-[12px]">
-            Best {bestClean} &middot; {stats.totalLapses} slips logged
+            Best {bestClean} &middot;{' '}
+            {stats.totalLapses === 1 ? '1 slip' : `${stats.totalLapses} slips`} logged
           </div>
 
           <div className="mt-4 grid grid-cols-3 gap-2">

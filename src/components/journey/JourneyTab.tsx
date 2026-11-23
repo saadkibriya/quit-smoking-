@@ -13,6 +13,7 @@ import {
   calculateAvoidedCigarettes,
   calculateMoneyKept,
   calculateCurrentStreak,
+  isSmokeEvent,
 } from '../../domain/calculations';
 import { countUrgesBeaten, formatCleanTime, getFapStats } from '../../domain/fap';
 import { MILESTONES } from '../../content/milestones';
@@ -108,10 +109,10 @@ export const JourneyTab: React.FC<JourneyTabProps> = ({
     const prevStr = toLocalDateString(prevDate.getTime());
 
     const curCount = entries.filter(
-      (e) => e.type === 'CIGARETTE' && toLocalDateString(e.timestamp) === curStr
+      (e) => isSmokeEvent(e) && toLocalDateString(e.timestamp) === curStr
     ).length;
     const prevCount = entries.filter(
-      (e) => e.type === 'CIGARETTE' && toLocalDateString(e.timestamp) === prevStr
+      (e) => isSmokeEvent(e) && toLocalDateString(e.timestamp) === prevStr
     ).length;
 
     barDaysList.push({
@@ -161,7 +162,8 @@ export const JourneyTab: React.FC<JourneyTabProps> = ({
             {formatCleanTime(fapStats)}
           </div>
           <p className="text-[11px] font-medium text-[#5E5E5E] dark:text-[#A6A6A6] mt-1">
-            Best {bestClean} · {fapStats.totalLapses} slips all time
+            Best {bestClean} ·{' '}
+            {fapStats.totalLapses === 1 ? '1 slip' : `${fapStats.totalLapses} slips`} all time
           </p>
 
           <div className="mt-4 grid grid-cols-3 gap-3">
