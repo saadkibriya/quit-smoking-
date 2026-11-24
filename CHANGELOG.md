@@ -2,6 +2,28 @@
 
 All notable changes to Unlit are documented here per `infos.md` (Worker Rules) and `roadmap.md`.
 
+## [2026-11-24] — Three search-bar widgets with their own settings
+
+### Added
+- **Days, Streak and Both widgets, all 4 × 1.** Each one is pinned to the Google search
+  bar's footprint (`targetCellWidth` 4, `targetCellHeight` 1, `resizeMode` none) and paints
+  as one pill: accent dot, big number over a tiny caption, and a quiet supporting line.
+  `Days` counts smoke-free days, `Streak` counts the second habit, and `Both` shows the two
+  side by side.
+- **Per-widget settings.** Placing a widget opens a settings sheet, and long-pressing it
+  offers Edit again (`widgetFeatures="reconfigurable"`). Each placed instance stores its own
+  appearance (Auto / Light / Dark), accent (Mono / Green / Amber / Blue) and figure
+  (Days, Time, Saved, Count; Days or Time on `Streak`). The old Time, Savings and Count
+  widgets now live inside the `Days` settings instead of cluttering the picker.
+- The in-app widget preview shows the three bars, live settings and the same-size Google
+  bar for scale.
+
+### Changed
+- **Widget hint text is gone.** The `tap the number to log` / `tap to open Tally` line was
+  removed from every widget; the number is the affordance.
+- Tapping the number on `Days` still opens the quick-log dialog; tapping the rest of a bar
+  opens the app. The dialog copy is now just "Add a count".
+
 ## [2026-11-24] — Discreet name, icon and widget copy
 
 ### Changed
