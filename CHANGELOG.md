@@ -2,6 +2,14 @@
 
 All notable changes to Unlit are documented here per `infos.md` (Worker Rules) and `roadmap.md`.
 
+## [2026-11-24] — One-row 1×4 widget size
+
+### Added
+- **A 1×4 strip size for every widget.** All five widgets now shrink to a single row
+  (`minHeight`/`minResizeHeight` 40dp), where the hero number sits on the left and its
+  caption and supporting line sit beside it. Resizing back up returns to the 2×2, 2×4,
+  4×2 or 4×4 layouts, so the same widget covers a full-width strip on the home screen.
+
 ## [2026-11-23] — Correct fap streaks and stats after undo
 
 ### Fixed

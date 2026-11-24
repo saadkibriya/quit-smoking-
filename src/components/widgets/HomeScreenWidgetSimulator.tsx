@@ -593,14 +593,14 @@ export const HomeScreenWidgetSimulator: React.FC<HomeScreenWidgetSimulatorProps>
           <div className="flex-1 overflow-y-auto space-y-4 pr-1">
             <div className="flex items-center justify-between shrink-0">
               <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#5E5E5E] dark:text-[#8A8A8A]">
-                {tracksFap ? 'Five' : 'Four'} widgets · every one resizable
+                {tracksFap ? 'Five' : 'Four'} widgets · 1×4 strip up to 4×4
               </span>
             </div>
 
             {/* W1 Detailed */}
             <div className="p-4 rounded-3xl bg-[#000000] border border-[#2A2A2A] space-y-2">
               <div className="flex items-center justify-between text-xs">
-                <span className="font-bold text-white">Unlit days — 2×2 up to 4×4</span>
+                <span className="font-bold text-white">Unlit days — 1×4 strip up to 4×4</span>
                 <span className="text-[10px] font-mono text-[#8A8A8A]">Ticks live · tap the number to log</span>
               </div>
               <div className="flex items-baseline gap-2">
@@ -609,14 +609,14 @@ export const HomeScreenWidgetSimulator: React.FC<HomeScreenWidgetSimulatorProps>
                 <span className="font-mono text-xs text-white ml-2">{streak.formattedClock}</span>
               </div>
               <p className="text-[11px] text-[#8A8A8A]">
-                Ticks live at any size, and the layout switches to a wide or tall version as you resize.
+                Ticks live at any size, and the layout switches to a one-row strip, wide or tall version as you resize.
               </p>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div className="p-3.5 rounded-3xl bg-[#000000] border border-[#2A2A2A] text-center">
                 <span className="text-xs font-bold block mb-1">Resize freely</span>
-                <span className="text-[10px] text-[#8A8A8A] block">Pull any corner: 2×2, 2×4, 4×2 or 4×4. The content adapts.</span>
+                <span className="text-[10px] text-[#8A8A8A] block">Pull a corner: a 1×4 single-row strip, 2×2, 2×4, 4×2 or 4×4. The content adapts.</span>
               </div>
               <div className="p-3.5 rounded-3xl bg-[#000000] border border-[#2A2A2A] text-center">
                 <span className="text-xs font-bold text-[#D71921] block mb-1">Tap to log</span>

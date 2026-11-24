@@ -49,8 +49,9 @@ import org.json.JSONObject;
  * number opens the quick log dialog), `Unlit — time` (hero is the elapsed time,
  * from minutes up to days), `Unlit — savings` (hero is the money saved) and
  * `Unlit — not smoked` (hero is the cigarette count). All of them adapt their
- * layout to the space the user gives them: 2x2 shows only the hero, 2x4 stacks
- * the details, 4x2 puts the numbers beside the hero, 4x4 is the full card.
+ * layout to the space the user gives them: 1x4 is a single-row strip with the
+ * hero beside its caption, 2x2 shows only the hero, 2x4 stacks the details, 4x2
+ * puts the numbers beside the hero, 4x4 is the full card.
  * Colours follow the system's light/dark setting, so the same widget is black on
  * white or white on black.
  */
@@ -70,6 +71,7 @@ public abstract class UnlitWidgetBase extends AppWidgetProvider {
     static final int SIZE_TALL = 1;
     static final int SIZE_WIDE = 2;
     static final int SIZE_LARGE = 3;
+    static final int SIZE_STRIP = 4;
 
     /** Which of the widgets this provider renders. */
     protected abstract int mode();
@@ -81,7 +83,8 @@ public abstract class UnlitWidgetBase extends AppWidgetProvider {
 
     @Override
     public void onAppWidgetOptionsChanged(Context context, AppWidgetManager manager, int id, Bundle options) {
-        // Resizing 2x2 -> 2x4 -> 4x4 -> 4x2 changes the layout, not just padding.
+        // Resizing 1x4 -> 2x2 -> 2x4 -> 4x4 -> 4x2 changes the layout, not just
+        // padding.
         // Paint from the bundle the system just handed us: the manager's stored
         // options can still hold the previous size at this point.
         updateOne(context, manager, id, mode(), options);
@@ -155,6 +158,7 @@ public abstract class UnlitWidgetBase extends AppWidgetProvider {
     }
 
     private static int layoutFor(int size) {
+        if (size == SIZE_STRIP) return R.layout.widget_strip;
         if (size == SIZE_TALL) return R.layout.widget_tall;
         if (size == SIZE_WIDE) return R.layout.widget_wide;
         if (size == SIZE_LARGE) return R.layout.widget_large;
@@ -197,6 +201,10 @@ public abstract class UnlitWidgetBase extends AppWidgetProvider {
         if (h <= 0) h = 110;
         boolean wide = w >= 185;
         boolean tall = h >= 185;
+        // One row of cells reports ~40-70dp next to the ~110dp of two rows, so a
+        // wide, short widget gets the single-row strip layout instead of the
+        // wide card (whose stacked label/hero/sub would not fit in one row).
+        if (wide && h < 95) return SIZE_STRIP;
         if (wide && tall) return SIZE_LARGE;
         if (wide) return SIZE_WIDE;
         if (tall) return SIZE_TALL;
@@ -308,7 +316,8 @@ public abstract class UnlitWidgetBase extends AppWidgetProvider {
 
     private static float heroSize(int size, int length) {
         float base;
-        if (size == SIZE_SMALL) base = 40f;
+        if (size == SIZE_STRIP) base = 30f;
+        else if (size == SIZE_SMALL) base = 40f;
         else if (size == SIZE_TALL) base = 54f;
         else if (size == SIZE_WIDE) base = 40f;
         else base = 60f;
@@ -447,7 +456,8 @@ public abstract class UnlitWidgetBase extends AppWidgetProvider {
         v.setTextViewText(R.id.stat2_value, stat2Value);
         v.setTextViewText(R.id.stat2_label, stat2Label);
 
-        v.setViewVisibility(R.id.stats_row, size == SIZE_SMALL ? View.GONE : View.VISIBLE);
+        v.setViewVisibility(R.id.stats_row,
+                size == SIZE_SMALL || size == SIZE_STRIP ? View.GONE : View.VISIBLE);
         v.setViewVisibility(R.id.divider, size == SIZE_TALL || size == SIZE_LARGE ? View.VISIBLE : View.GONE);
         v.setViewVisibility(R.id.hint, size == SIZE_TALL || size == SIZE_LARGE ? View.VISIBLE : View.GONE);
 
@@ -492,7 +502,7 @@ sed -i "s/__APP_ID__/$APP_ID/g" "$PKG_DIR/UnlitWidgetBase.java"
 cat > "$PKG_DIR/DaysWidgetProvider.java" <<'EOF'
 package __APP_ID__;
 
-/** 2x2..4x4 widget whose hero is the smoke-free day count. */
+/** 1x4..4x4 widget whose hero is the smoke-free day count. */
 public class DaysWidgetProvider extends UnlitWidgetBase {
     @Override
     protected int mode() {
@@ -505,7 +515,7 @@ sed -i "s/__APP_ID__/$APP_ID/g" "$PKG_DIR/DaysWidgetProvider.java"
 cat > "$PKG_DIR/ClockWidgetProvider.java" <<'EOF'
 package __APP_ID__;
 
-/** 2x2..4x4 widget whose hero is the elapsed time, minutes up to days. */
+/** 1x4..4x4 widget whose hero is the elapsed time, minutes up to days. */
 public class ClockWidgetProvider extends UnlitWidgetBase {
     @Override
     protected int mode() {
@@ -518,7 +528,7 @@ sed -i "s/__APP_ID__/$APP_ID/g" "$PKG_DIR/ClockWidgetProvider.java"
 cat > "$PKG_DIR/MoneyWidgetProvider.java" <<'EOF'
 package __APP_ID__;
 
-/** 2x2..4x4 widget whose hero is the money saved since the quit date. */
+/** 1x4..4x4 widget whose hero is the money saved since the quit date. */
 public class MoneyWidgetProvider extends UnlitWidgetBase {
     @Override
     protected int mode() {
@@ -531,7 +541,7 @@ sed -i "s/__APP_ID__/$APP_ID/g" "$PKG_DIR/MoneyWidgetProvider.java"
 cat > "$PKG_DIR/AvoidedWidgetProvider.java" <<'EOF'
 package __APP_ID__;
 
-/** 2x2..4x4 widget whose hero is the cigarettes not smoked. */
+/** 1x4..4x4 widget whose hero is the cigarettes not smoked. */
 public class AvoidedWidgetProvider extends UnlitWidgetBase {
     @Override
     protected int mode() {
@@ -544,7 +554,7 @@ sed -i "s/__APP_ID__/$APP_ID/g" "$PKG_DIR/AvoidedWidgetProvider.java"
 cat > "$PKG_DIR/CleanWidgetProvider.java" <<'EOF'
 package __APP_ID__;
 
-/** 2x2..4x4 widget whose hero is the porn/fap clean-day count. */
+/** 1x4..4x4 widget whose hero is the porn/fap clean-day count. */
 public class CleanWidgetProvider extends UnlitWidgetBase {
     @Override
     protected int mode() {
@@ -995,6 +1005,118 @@ cat > "$MAIN/res/layout/widget_wide.xml" <<EOF
 </LinearLayout>
 EOF
 
+cat > "$MAIN/res/layout/widget_strip.xml" <<EOF
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:paddingLeft="16dp"
+    android:paddingRight="16dp"
+    android:paddingTop="6dp"
+    android:paddingBottom="6dp"
+    android:background="@drawable/widget_bg_dark">
+
+    <TextView
+        android:id="@+id/hero"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="--"
+        android:textSize="30sp"
+        android:textStyle="bold"
+        android:includeFontPadding="false"
+        android:maxLines="1"
+        android:ellipsize="end" />
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:layout_marginLeft="14dp"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/label"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="DAYS SMOKE-FREE"
+            android:textSize="10sp"
+            android:letterSpacing="0.12"
+            android:maxLines="1"
+            android:ellipsize="end" />
+
+        <TextView
+            android:id="@+id/sub"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text=""
+            android:textSize="11sp"
+            android:maxLines="1"
+            android:ellipsize="end" />
+
+        <TextView
+            android:id="@+id/hint"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:visibility="gone" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/divider"
+        android:layout_width="1dp"
+        android:layout_height="match_parent"
+        android:layout_marginLeft="12dp"
+        android:layout_marginRight="12dp"
+        android:visibility="gone" />
+
+    <LinearLayout
+        android:id="@+id/stats_row"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/stat1_value"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="-"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:includeFontPadding="false"
+            android:maxLines="1" />
+        <TextView
+            android:id="@+id/stat1_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="NOT SMOKED"
+            android:textSize="9sp"
+            android:letterSpacing="0.08"
+            android:maxLines="1" />
+
+        <TextView
+            android:id="@+id/stat2_value"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="-"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:includeFontPadding="false"
+            android:maxLines="1" />
+        <TextView
+            android:id="@+id/stat2_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="SAVED"
+            android:textSize="9sp"
+            android:letterSpacing="0.08"
+            android:maxLines="1" />
+    </LinearLayout>
+</LinearLayout>
+EOF
+
 cat > "$MAIN/res/layout/widget_large.xml" <<EOF
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
@@ -1086,7 +1208,7 @@ cat > "$MAIN/res/xml/days_widget_info.xml" <<'EOF'
     android:minWidth="110dp"
     android:minHeight="110dp"
     android:minResizeWidth="110dp"
-    android:minResizeHeight="110dp"
+    android:minResizeHeight="40dp"
     android:targetCellWidth="2"
     android:targetCellHeight="2"
     android:updatePeriodMillis="1800000"
@@ -1103,7 +1225,7 @@ cat > "$MAIN/res/xml/clock_widget_info.xml" <<'EOF'
     android:minWidth="110dp"
     android:minHeight="110dp"
     android:minResizeWidth="110dp"
-    android:minResizeHeight="110dp"
+    android:minResizeHeight="40dp"
     android:targetCellWidth="2"
     android:targetCellHeight="2"
     android:updatePeriodMillis="1800000"
@@ -1120,7 +1242,7 @@ cat > "$MAIN/res/xml/money_widget_info.xml" <<'EOF'
     android:minWidth="110dp"
     android:minHeight="110dp"
     android:minResizeWidth="110dp"
-    android:minResizeHeight="110dp"
+    android:minResizeHeight="40dp"
     android:targetCellWidth="2"
     android:targetCellHeight="2"
     android:updatePeriodMillis="1800000"
@@ -1137,7 +1259,7 @@ cat > "$MAIN/res/xml/avoided_widget_info.xml" <<'EOF'
     android:minWidth="110dp"
     android:minHeight="110dp"
     android:minResizeWidth="110dp"
-    android:minResizeHeight="110dp"
+    android:minResizeHeight="40dp"
     android:targetCellWidth="2"
     android:targetCellHeight="2"
     android:updatePeriodMillis="1800000"
@@ -1154,7 +1276,7 @@ cat > "$MAIN/res/xml/clean_widget_info.xml" <<'EOF'
     android:minWidth="110dp"
     android:minHeight="110dp"
     android:minResizeWidth="110dp"
-    android:minResizeHeight="110dp"
+    android:minResizeHeight="40dp"
     android:targetCellWidth="2"
     android:targetCellHeight="2"
     android:updatePeriodMillis="1800000"
