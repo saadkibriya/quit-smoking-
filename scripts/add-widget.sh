@@ -45,10 +45,10 @@ import org.json.JSONObject;
 /**
  * Shared home-screen widget behaviour.
  *
- * Four widgets use this: `Unlit — days` (hero is the day count, tapping the
- * number opens the quick log dialog), `Unlit — time` (hero is the elapsed time,
- * from minutes up to days), `Unlit — savings` (hero is the money saved) and
- * `Unlit — not smoked` (hero is the cigarette count). All of them adapt their
+ * Five widgets use this: `Days` (hero is the day count, tapping the number
+ * opens the quick log dialog), `Time` (hero is the elapsed time, from minutes up
+ * to days), `Savings` (hero is the money saved), `Count` (hero is the cigarette
+ * count) and `Streak`. All of them adapt their
  * layout to the space the user gives them: 1x4 is a single-row strip with the
  * hero beside its caption, 2x2 shows only the hero, 2x4 stacks the details, 4x2
  * puts the numbers beside the hero, 4x4 is the full card.
@@ -226,7 +226,7 @@ public abstract class UnlitWidgetBase extends AppWidgetProvider {
         double saved;
         String since = "";
 
-        // Porn/fap tracker (the "Unlit clean" widget).
+        // Porn/fap tracker (the "Streak" widget).
         long fapQuit;
         long fapSlips;
         long fapElapsed;
@@ -356,26 +356,28 @@ public abstract class UnlitWidgetBase extends AppWidgetProvider {
         String hint;
 
         if (mode == MODE_CLEAN) {
+            // Deliberately neutral wording: this sits on a home screen other
+            // people can see.
             if (d.fapQuit <= 0L) {
                 hero = "--";
-                label = "PORN / FAP";
+                label = "STREAK";
                 sub = "OPEN THE APP TO SET UP";
                 hint = "";
             } else if (d.fapDays < 1L) {
                 // Under a day the clock is the honest number.
                 hero = d.fapShort;
-                label = "CLEAN FOR";
+                label = "STREAK";
                 sub = "SINCE " + d.fapSince;
-                hint = "TAP TO OPEN UNLIT";
+                hint = "TAP TO OPEN TALLY";
             } else {
                 hero = String.valueOf(d.fapDays);
-                label = d.fapDays == 1L ? "DAY CLEAN" : "DAYS CLEAN";
+                label = "STREAK";
                 sub = d.fapShort + "  \u00B7  SINCE " + d.fapSince;
-                hint = "TAP TO OPEN UNLIT";
+                hint = "TAP TO OPEN TALLY";
             }
         } else if (d.quit <= 0L) {
             hero = "--";
-            label = "UNLIT";
+            label = "TALLY";
             sub = "OPEN THE APP TO SET UP";
             hint = "";
         } else if (mode == MODE_MONEY) {
@@ -384,30 +386,30 @@ public abstract class UnlitWidgetBase extends AppWidgetProvider {
             sub = d.days == 0L
                     ? "SINCE " + d.since
                     : d.days + (d.days == 1L ? " DAY" : " DAYS") + "  \u00B7  SINCE " + d.since;
-            hint = "TAP TO OPEN UNLIT";
+            hint = "TAP TO OPEN TALLY";
         } else if (mode == MODE_AVOIDED) {
             hero = String.format(Locale.US, "%,d", d.avoided);
-            label = "NOT SMOKED";
+            label = "AVOIDED";
             sub = d.days == 0L
                     ? "SINCE " + d.since
                     : d.days + (d.days == 1L ? " DAY" : " DAYS") + "  \u00B7  SINCE " + d.since;
             hint = "TAP THE NUMBER TO LOG";
         } else if (mode == MODE_CLOCK) {
             hero = elapsedShort(d);
-            label = "SMOKE-FREE FOR";
+            label = "TIME";
             sub = d.days == 0L
                     ? "SINCE " + d.since
                     : d.days + (d.days == 1L ? " DAY" : " DAYS") + "  \u00B7  SINCE " + d.since;
-            hint = "TAP TO OPEN UNLIT";
+            hint = "TAP TO OPEN TALLY";
         } else if (d.days < 1L) {
             // Under a day a bare "0" would be a lie; show the clock instead.
             hero = elapsedShort(d);
-            label = "SMOKE-FREE FOR";
+            label = "TIME";
             sub = "SINCE " + d.since;
             hint = "TAP THE NUMBER TO LOG";
         } else {
             hero = String.valueOf(d.days);
-            label = d.days == 1L ? "DAY SMOKE-FREE" : "DAYS SMOKE-FREE";
+            label = d.days == 1L ? "DAY" : "DAYS";
             sub = elapsedLong(d);
             hint = "TAP THE NUMBER TO LOG";
         }
@@ -427,17 +429,17 @@ public abstract class UnlitWidgetBase extends AppWidgetProvider {
         if (mode == MODE_CLEAN) {
             boolean set = d.fapQuit > 0L;
             stat1Value = set ? String.valueOf(d.fapSlips) : "--";
-            stat1Label = "SLIPS LOGGED";
+            stat1Label = "LOGGED";
             stat2Value = set ? String.valueOf(d.fapDays) : "--";
-            stat2Label = d.fapDays == 1L ? "DAY CLEAN" : "DAYS CLEAN";
+            stat2Label = d.fapDays == 1L ? "DAY" : "DAYS";
         } else if (d.quit <= 0L) {
             stat1Value = "--";
-            stat1Label = "NOT SMOKED";
+            stat1Label = "AVOIDED";
             stat2Value = "--";
             stat2Label = "SAVED";
         } else if (mode == MODE_MONEY) {
             stat1Value = String.format(Locale.US, "%,d", d.avoided);
-            stat1Label = "NOT SMOKED";
+            stat1Label = "AVOIDED";
             stat2Value = String.valueOf(d.days);
             stat2Label = d.days == 1L ? "DAY" : "DAYS";
         } else if (mode == MODE_AVOIDED) {
@@ -447,7 +449,7 @@ public abstract class UnlitWidgetBase extends AppWidgetProvider {
             stat2Label = d.days == 1L ? "DAY" : "DAYS";
         } else {
             stat1Value = String.format(Locale.US, "%,d", d.avoided);
-            stat1Label = "NOT SMOKED";
+            stat1Label = "AVOIDED";
             stat2Value = money(d);
             stat2Label = "SAVED";
         }
@@ -738,7 +740,7 @@ STATS_BLOCK='    <LinearLayout
                 android:id="@+id/stat1_label"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="NOT SMOKED"
+                android:text="AVOIDED"
                 android:textSize="9sp"
                 android:letterSpacing="0.08"
                 android:maxLines="1" />
@@ -785,7 +787,7 @@ cat > "$MAIN/res/layout/widget_small.xml" <<EOF
         android:id="@+id/label"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="DAYS SMOKE-FREE"
+        android:text="DAYS"
         android:textSize="10sp"
         android:letterSpacing="0.12"
         android:maxLines="1"
@@ -842,7 +844,7 @@ cat > "$MAIN/res/layout/widget_tall.xml" <<EOF
         android:id="@+id/label"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="DAYS SMOKE-FREE"
+        android:text="DAYS"
         android:textSize="11sp"
         android:letterSpacing="0.12"
         android:maxLines="1"
@@ -916,7 +918,7 @@ cat > "$MAIN/res/layout/widget_wide.xml" <<EOF
             android:id="@+id/label"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="DAYS SMOKE-FREE"
+            android:text="DAYS"
             android:textSize="10sp"
             android:letterSpacing="0.12"
             android:maxLines="1"
@@ -977,7 +979,7 @@ cat > "$MAIN/res/layout/widget_wide.xml" <<EOF
             android:id="@+id/stat1_label"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="NOT SMOKED"
+            android:text="AVOIDED"
             android:textSize="9sp"
             android:letterSpacing="0.08"
             android:maxLines="1" />
@@ -1041,7 +1043,7 @@ cat > "$MAIN/res/layout/widget_strip.xml" <<EOF
             android:id="@+id/label"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="DAYS SMOKE-FREE"
+            android:text="DAYS"
             android:textSize="10sp"
             android:letterSpacing="0.12"
             android:maxLines="1"
@@ -1091,7 +1093,7 @@ cat > "$MAIN/res/layout/widget_strip.xml" <<EOF
             android:id="@+id/stat1_label"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="NOT SMOKED"
+            android:text="AVOIDED"
             android:textSize="9sp"
             android:letterSpacing="0.08"
             android:maxLines="1" />
@@ -1131,7 +1133,7 @@ cat > "$MAIN/res/layout/widget_large.xml" <<EOF
         android:id="@+id/label"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="DAYS SMOKE-FREE"
+        android:text="DAYS"
         android:textSize="12sp"
         android:letterSpacing="0.12"
         android:maxLines="1"
@@ -1287,19 +1289,21 @@ cat > "$MAIN/res/xml/clean_widget_info.xml" <<'EOF'
     android:description="@string/widget_clean_description" />
 EOF
 
+# Widget-picker names and descriptions are visible to anyone holding the phone,
+# so they stay generic: a counter, not a confession.
 cat > "$MAIN/res/values/widget_strings.xml" <<'EOF'
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="widget_days_name">Unlit days</string>
-    <string name="widget_days_description">Smoke-free day count. Tap the number to log a cigarette.</string>
-    <string name="widget_clock_name">Unlit time</string>
-    <string name="widget_clock_description">Time since you quit, from minutes to days.</string>
-    <string name="widget_money_name">Unlit savings</string>
-    <string name="widget_money_description">Money saved since you quit.</string>
-    <string name="widget_avoided_name">Unlit not smoked</string>
-    <string name="widget_avoided_description">Cigarettes you have not smoked since you quit.</string>
-    <string name="widget_clean_name">Unlit clean</string>
-    <string name="widget_clean_description">Days clean from porn / fap, with the slips you logged.</string>
+    <string name="widget_days_name">Days</string>
+    <string name="widget_days_description">A day count that updates itself. Tap the number to log.</string>
+    <string name="widget_clock_name">Time</string>
+    <string name="widget_clock_description">Elapsed time at a glance.</string>
+    <string name="widget_money_name">Savings</string>
+    <string name="widget_money_description">Money kept so far.</string>
+    <string name="widget_avoided_name">Count</string>
+    <string name="widget_avoided_description">A running total for your home screen.</string>
+    <string name="widget_clean_name">Streak</string>
+    <string name="widget_clean_description">A streak counter for your home screen.</string>
     <style name="UnlitQuickLog" parent="@android:style/Theme.DeviceDefault.Dialog">
         <item name="android:windowBackground">@android:color/transparent</item>
         <item name="android:windowIsFloating">true</item>
@@ -1448,4 +1452,30 @@ src = re.sub(r'[ \t]*</application>', lambda m: receivers + '    </application>'
 open(path, 'w', encoding='utf-8').write(src)
 PY
 
-echo "Widgets added for $APP_ID"
+# ---------------------------------------------------------------------------
+# Launcher name. `cap add android` writes the label from capacitor.config.json,
+# but pin it here too so a template change can never ship a generic "My App"
+# (or the old name) to the home screen.
+# ---------------------------------------------------------------------------
+APP_NAME=$(node -e "console.log(require('./capacitor.config.json').appName)")
+STRINGS_XML="$MAIN/res/values/strings.xml"
+if [ -f "$STRINGS_XML" ]; then
+    python3 - "$STRINGS_XML" "$APP_NAME" <<'PY'
+import re, sys
+path, name = sys.argv[1], sys.argv[2]
+src = open(path, encoding='utf-8').read()
+for key in ('app_name', 'title_activity_main'):
+    src = re.sub(
+        r'(<string\s+name="%s"\s*>)[^<]*(</string>)' % key,
+        lambda m: m.group(1) + name + m.group(2),
+        src,
+    )
+open(path, 'w', encoding='utf-8').write(src)
+PY
+fi
+
+# Launcher icon: the generator paints the PWA icons always, and the Android
+# mipmaps now that android/ exists.
+node scripts/generate-icons.mjs
+
+echo "Widgets and icon added for $APP_ID"

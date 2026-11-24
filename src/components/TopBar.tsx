@@ -32,7 +32,7 @@ export const TopBar: React.FC<TopBarProps> = ({
           </div>
           <div>
             <h1 className="text-lg font-bold tracking-tight text-black dark:text-white leading-none">
-              Unlit
+              Tally
             </h1>
             <p className="text-[11px] font-medium text-[#5E5E5E] dark:text-[#A6A6A6] mt-0.5 leading-none">
               {dayGreeting}

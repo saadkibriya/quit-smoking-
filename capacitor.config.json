@@ -1,6 +1,6 @@
 {
   "appId": "com.unlit.app",
-  "appName": "Unlit",
+  "appName": "Tally",
   "webDir": "dist",
   "server": {
     "androidScheme": "https"

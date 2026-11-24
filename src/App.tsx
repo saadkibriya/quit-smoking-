@@ -663,7 +663,7 @@ export default function App() {
           <div className="w-full max-w-md rounded-3xl bg-[#FFFFFF] dark:bg-[#0A0A0A] text-black dark:text-white border border-[#C4C4C4] dark:border-[#2A2A2A] p-5 space-y-3">
             <h2 className="text-xl font-black tracking-tight">What are you trying to quit?</h2>
             <p className="text-xs text-[#5E5E5E] dark:text-[#A6A6A6]">
-              Unlit now tracks smoking and porn/fap separately. Pick what applies; you can
+              Tally now tracks smoking and porn/fap separately. Pick what applies; you can
               change it any time in Settings.
             </p>
             {[

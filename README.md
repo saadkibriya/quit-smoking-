@@ -1,6 +1,6 @@
-# Unlit — Evidence-Based Quit-Smoking Tracker & Dual-Persona Mentor
+# Tally — Evidence-Based Quit-Smoking Tracker & Dual-Persona Mentor
 
-**Unlit** is a free, private, offline-first quit-smoking tracker and dual-persona mentor ("The Doctor" + "The Coach") designed around clinical addiction science. Built with strict Google Pixel monochrome aesthetics (solid surfaces, true OLED black #000000 and crisp white #FFFFFF).
+**Tally** is a free, private, offline-first quit-smoking tracker and dual-persona mentor ("The Doctor" + "The Coach") designed around clinical addiction science. Built with strict Google Pixel monochrome aesthetics (solid surfaces, true OLED black #000000 and crisp white #FFFFFF).
 
 ---
 

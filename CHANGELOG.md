@@ -2,6 +2,27 @@
 
 All notable changes to Unlit are documented here per `infos.md` (Worker Rules) and `roadmap.md`.
 
+## [2026-11-24] — Discreet name, icon and widget copy
+
+### Changed
+- **The app is now called Tally.** The launcher label, PWA manifest, header, onboarding,
+  exports and release APK all use the new name. `appId` stays `com.unlit.app` and every
+  `unlit_*` storage key is untouched, so the new build installs over the old one and keeps
+  the user's data.
+- **Widgets no longer name the habit.** In the widget picker the five widgets are now
+  Days, Time, Savings, Count and Streak, with descriptions that only mention a count.
+  On the home screen the labels are `DAYS`, `TIME`, `SAVED`, `AVOIDED` and `STREAK`;
+  `PORN / FAP`, `SMOKE-FREE`, `NOT SMOKED` and `SLIPS LOGGED` are gone.
+- **New launcher icon.** The gauge ring is replaced by three rising white bars on
+  near-black, matching the header mark. `scripts/generate-icons.mjs` now also paints the
+  Android square, round and adaptive-icon layers when `android/` exists.
+
+### Added
+- **Releases are gated on tests.** The APK workflow now runs the type check, the unit
+  tests and a syntax check of the native widget script before it builds or publishes.
+- **`test/widget-copy.test.ts`** locks the discreet launcher name, widget-picker copy,
+  on-widget labels and the generated icon layers.
+
 ## [2026-11-24] — One-row 1×4 widget size
 
 ### Added

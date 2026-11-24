@@ -237,7 +237,7 @@ export const ToolkitTab: React.FC<ToolkitTabProps> = ({
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `Unlit_Character_Certificate_${toLocalDateString(Date.now())}.md`;
+    a.download = `Tally_Character_Certificate_${toLocalDateString(Date.now())}.md`;
     a.click();
   };
 
@@ -629,7 +629,7 @@ export const ToolkitTab: React.FC<ToolkitTabProps> = ({
                 <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
                   {chatMessages.length === 0 ? (
                     <div className="p-3 rounded-2xl bg-[#F2F2F2] dark:bg-[#141414] text-xs text-[#5E5E5E] dark:text-[#A6A6A6]">
-                      "Hi! I'm your Unlit coach. Ask me for a fast craving distraction, how to handle after-meal urges, or just say how today is going."
+                      "Hi! I'm your Tally coach. Ask me for a fast craving distraction, how to handle after-meal urges, or just say how today is going."
                     </div>
                   ) : (
                     chatMessages.map((msg) => (
@@ -1241,7 +1241,7 @@ export const ToolkitTab: React.FC<ToolkitTabProps> = ({
 
         <div className="p-5 rounded-3xl bg-[#F2F2F2] dark:bg-[#141414] border border-[#C4C4C4] dark:border-[#3D3D3D] space-y-2">
           <p className="text-xs text-[#5E5E5E] dark:text-[#A6A6A6]">
-            Unlit features 9 Nothing OS Glance widgets (W1–W9) with Chronometer live tickers:
+            Tally features 9 Nothing OS Glance widgets (W1–W9) with Chronometer live tickers:
           </p>
           <button
             onClick={() => {
@@ -1269,10 +1269,10 @@ export const ToolkitTab: React.FC<ToolkitTabProps> = ({
                   Aggressive manufacturer battery savers (Samsung One UI, Xiaomi HyperOS, OnePlus OxygenOS) can freeze widget updates:
                 </p>
                 <ol className="list-decimal pl-4 space-y-1">
-                  <li>Open Android <strong className="text-black dark:text-white">Settings → Apps → Unlit</strong>.</li>
+                  <li>Open Android <strong className="text-black dark:text-white">Settings → Apps → Tally</strong>.</li>
                   <li>Tap <strong className="text-black dark:text-white">Battery</strong> and select <strong className="text-black dark:text-white">Unrestricted</strong>.</li>
                   <li>For Xiaomi/Redmi, enable <strong className="text-black dark:text-white">Autostart</strong> in app info.</li>
-                  <li>In Unlit, Chronometer ticks independently on your home screen without draining battery.</li>
+                  <li>In Tally, Chronometer ticks independently on your home screen without draining battery.</li>
                 </ol>
               </div>
             </details>
@@ -1672,7 +1672,7 @@ export const ToolkitTab: React.FC<ToolkitTabProps> = ({
                 Labs: Track Another Habit
               </span>
               <p className="text-[11px] text-[#5E5E5E] dark:text-[#A6A6A6] mb-2">
-                Apply Unlit's slip-friendly engine to alcohol, sugar, or scrolling.
+                Apply Tally's slip-friendly engine to alcohol, sugar, or scrolling.
               </p>
 
               {otherHabits.map((h) => (
@@ -1831,7 +1831,7 @@ export const ToolkitTab: React.FC<ToolkitTabProps> = ({
         <div className="p-5 rounded-3xl bg-[#F2F2F2] dark:bg-[#141414] border border-[#C4C4C4] dark:border-[#3D3D3D] space-y-3 text-xs">
           <div>
             <h4 className="font-bold text-black dark:text-white">
-              Unlit: Free, Private, Offline-First
+              Tally: Free, Private, Offline-First
             </h4>
             <p className="text-[11px] text-[#5E5E5E] dark:text-[#A6A6A6] mt-0.5">
               Built on peer-reviewed clinical research. No accounts, no paywall, no tracking SDKs. All data stays strictly on your phone.

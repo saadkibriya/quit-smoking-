@@ -119,7 +119,7 @@ export const HomeScreenWidgetSimulator: React.FC<HomeScreenWidgetSimulatorProps>
               </h3>
             </div>
             <p className="text-[11px] text-[#5E5E5E] dark:text-[#8A8A8A]">
-              A preview of the widgets that install with Unlit
+              A preview of the widgets that install with Tally
             </p>
           </div>
           <button
@@ -181,7 +181,7 @@ export const HomeScreenWidgetSimulator: React.FC<HomeScreenWidgetSimulatorProps>
                   { id: 'w4', label: 'Days 2×2' },
                   { id: 'w5', label: 'Time' },
                   { id: 'w6', label: 'Savings' },
-                  ...(tracksFap ? [{ id: 'clean', label: 'Clean' }] : []),
+                  ...(tracksFap ? [{ id: 'clean', label: 'Streak' }] : []),
                 ].map((w) => (
                   <button
                     key={w.id}
@@ -239,7 +239,7 @@ export const HomeScreenWidgetSimulator: React.FC<HomeScreenWidgetSimulatorProps>
                   >
                     <div className="flex items-center justify-between text-xs mb-1">
                       <span className="text-[10px] font-mono tracking-widest uppercase text-[#8A8A8A]">
-                        SMOKE-FREE
+                        DAYS
                       </span>
                       <span className="text-[10px] font-mono text-[#8A8A8A]">
                         {isFutureQuit ? 'Starts soon' : round.currentRoundName}
@@ -305,7 +305,7 @@ export const HomeScreenWidgetSimulator: React.FC<HomeScreenWidgetSimulatorProps>
                     className="p-4 rounded-3xl bg-[#000000] border border-[#2A2A2A] flex flex-col justify-between cursor-pointer hover:border-white transition select-none max-w-xs mx-auto w-full min-h-[140px]"
                   >
                     <div className="flex items-center justify-between text-[10px] font-mono text-[#8A8A8A]">
-                      <span>SMOKE-FREE</span>
+                      <span>DAYS</span>
                       <span>W4 · 2×2</span>
                     </div>
                     <div>
@@ -398,22 +398,22 @@ export const HomeScreenWidgetSimulator: React.FC<HomeScreenWidgetSimulatorProps>
                     className="p-4 rounded-3xl bg-[#000000] border border-[#2A2A2A] text-white cursor-pointer hover:border-white transition select-none shadow-lg"
                   >
                     <div className="flex items-center justify-between text-[10px] font-mono tracking-widest uppercase text-[#8A8A8A]">
-                      <span>PORN / FAP</span>
-                      <span>CLEAN</span>
+                      <span>STREAK</span>
+                      <span>TALLY</span>
                     </div>
                     <div className="my-1 flex items-baseline gap-2">
                       <span className="font-doto font-black text-4xl sm:text-5xl text-white tracking-tight">
                         {fap.cleanDays}
                       </span>
                       <span className="text-sm font-bold text-[#8A8A8A] font-mono uppercase tracking-wider">
-                        DAYS CLEAN
+                        DAYS
                       </span>
                     </div>
                     <div className="text-xs font-mono font-bold text-white tracking-wider tabular-nums">
                       {formatCleanTime(fap)}
                     </div>
                     <div className="mt-3 pt-3 border-t border-[#1C1C1C] flex items-center justify-between text-[11px] font-mono text-[#8A8A8A]">
-                      <span>{fap.totalLapses === 1 ? '1 slip' : `${fap.totalLapses} slips`} logged</span>
+                      <span>{fap.totalLapses} logged</span>
                       <span>{fap.weekLapses} this week</span>
                     </div>
                   </div>
@@ -479,7 +479,7 @@ export const HomeScreenWidgetSimulator: React.FC<HomeScreenWidgetSimulatorProps>
                     className="p-4 rounded-3xl bg-[#000000] border border-[#2A2A2A] cursor-pointer hover:border-white transition select-none"
                   >
                     <div className="flex items-center justify-between text-[10px] font-mono text-[#8A8A8A] mb-2">
-                      <span>UNLIT OVERVIEW</span>
+                      <span>TALLY OVERVIEW</span>
                       <span>W9 · 4×2</span>
                     </div>
                     <div className="grid grid-cols-4 gap-1.5 text-center">
@@ -564,13 +564,13 @@ export const HomeScreenWidgetSimulator: React.FC<HomeScreenWidgetSimulatorProps>
                 <div className="w-11 h-11 rounded-2xl bg-[#141414] border border-[#262626] flex items-center justify-center text-[#8A8A8A]">
                   <MessageSquare className="w-5 h-5 text-white" />
                 </div>
-                {/* Unlit App Icon (Tapping launches App!) */}
+                {/* Tally App Icon (Tapping launches App!) */}
                 <div
                   onClick={() => {
                     Sound.tick();
                     onClose();
                   }}
-                  title="Launch Unlit App"
+                  title="Launch Tally App"
                   className="w-11 h-11 rounded-2xl bg-white text-black flex flex-col items-center justify-center cursor-pointer shadow-lg active:scale-95 transition"
                 >
                   <div className="flex items-end gap-0.5 h-4 w-4" aria-hidden="true">
@@ -578,7 +578,7 @@ export const HomeScreenWidgetSimulator: React.FC<HomeScreenWidgetSimulatorProps>
                     <span className="w-1 h-3 bg-black rounded-xs" />
                     <span className="w-1 h-4 bg-black rounded-xs" />
                   </div>
-                  <span className="text-[8px] font-bold font-mono">UNLIT</span>
+                  <span className="text-[8px] font-bold font-mono">TALLY</span>
                 </div>
                 <div className="w-11 h-11 rounded-2xl bg-[#141414] border border-[#262626] flex items-center justify-center text-[#8A8A8A]">
                   <Camera className="w-5 h-5 text-white" />
@@ -600,7 +600,8 @@ export const HomeScreenWidgetSimulator: React.FC<HomeScreenWidgetSimulatorProps>
             {/* W1 Detailed */}
             <div className="p-4 rounded-3xl bg-[#000000] border border-[#2A2A2A] space-y-2">
               <div className="flex items-center justify-between text-xs">
-                <span className="font-bold text-white">Unlit days — 1×4 strip up to 4×4</span>
+                <span className="font-bold text-white">Tally days — 1×4 strip up to 4×4</span>
+                {/* Shown as the neutral “Days” widget in the launcher picker. */}
                 <span className="text-[10px] font-mono text-[#8A8A8A]">Ticks live · tap the number to log</span>
               </div>
               <div className="flex items-baseline gap-2">
@@ -640,11 +641,11 @@ export const HomeScreenWidgetSimulator: React.FC<HomeScreenWidgetSimulatorProps>
             </div>
 
             <div className="p-4 rounded-3xl bg-[#000000] border border-[#2A2A2A] space-y-2">
-              <span className="font-bold text-xs block">Clean days (porn / fap)</span>
+              <span className="font-bold text-xs block">Streak widget (second habit)</span>
               <p className="text-[11px] text-[#8A8A8A]">
                 For the second habit: {fap.cleanDays} days clean, {fap.totalLapses} slips logged.{' '}
                 {tracksFap
-                  ? 'It is in your widget list as “Unlit clean”.'
+                  ? 'On the home screen it is the discreet “Tally streak” widget, with no habit name on it.'
                   : 'Turn on porn / fap tracking in Settings to use it.'}
               </p>
             </div>
@@ -653,8 +654,8 @@ export const HomeScreenWidgetSimulator: React.FC<HomeScreenWidgetSimulatorProps>
               <span className="font-bold text-xs block">How to add them</span>
               <ol className="list-decimal list-inside space-y-1 text-[11px] text-[#8A8A8A]">
                 <li>Long-press an empty spot on your home screen.</li>
-                <li>Tap Widgets, then open Unlit.</li>
-                <li>Drag out Days, Time, Savings, Not smoked or Clean, then resize it.</li>
+                <li>Tap Widgets, then open Tally.</li>
+                <li>Drag out Days, Time, Savings, Count or Streak, then resize it.</li>
               </ol>
             </div>
           </div>
@@ -664,7 +665,7 @@ export const HomeScreenWidgetSimulator: React.FC<HomeScreenWidgetSimulatorProps>
         <div className="pt-3 border-t border-[#C4C4C4] dark:border-[#2A2A2A] mt-3 flex items-center justify-between text-xs text-[#5E5E5E] dark:text-[#8A8A8A] shrink-0">
           <div className="flex items-center gap-1.5 text-[11px] pr-2">
             <Info className="w-3.5 h-3.5 text-black dark:text-white shrink-0" />
-            <span>On your phone: long-press home → Widgets → Unlit.</span>
+            <span>On your phone: long-press home → Widgets → Tally.</span>
           </div>
           <button
             onClick={onClose}

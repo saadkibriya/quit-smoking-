@@ -75,7 +75,7 @@ export async function askGeminiCoach(params: {
       // Loaded on demand: the SDK is ~300 kB and most sessions never use it.
       const { GoogleGenAI } = await import('@google/genai');
       const ai = new GoogleGenAI({ apiKey });
-      const systemInstruction = `You are the empathetic, doctor-backed, and proactive AI coach inside the Unlit quit-smoking app.
+      const systemInstruction = `You are the empathetic, doctor-backed, and proactive AI coach inside the Tally quit-smoking app.
 Your goals:
 1. Support, empower, and listen to the user. Speak warmly and practically.
 2. Monitor their live tracking data: ${JSON.stringify(dataSummary)}.

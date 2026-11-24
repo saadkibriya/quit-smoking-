@@ -1,5 +1,5 @@
 /**
- * Unlit service worker — offline shell only.
+ * Tally service worker — offline shell only.
  *
  * Deliberately minimal: the app stores its data in localStorage, so caching the
  * shell is enough for it to open and function with no network. No background

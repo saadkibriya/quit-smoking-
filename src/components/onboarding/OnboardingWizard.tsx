@@ -244,7 +244,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
               <span>Back</span>
             </button>
           ) : (
-            <span className="font-bold tracking-tight text-black dark:text-white">Unlit</span>
+            <span className="font-bold tracking-tight text-black dark:text-white">Tally</span>
           )}
           <span>
             Step {stepNumber} of {totalSteps}
@@ -283,7 +283,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
               ✓
             </div>
             <h2 className="text-3xl font-black tracking-tight">
-              Welcome to Unlit.
+              Welcome to Tally.
             </h2>
             <p className="text-sm text-[#5E5E5E] dark:text-[#A6A6A6]">
               A free, private tracker for the habits you want to stop. Calm mentor, careful doctor,
@@ -935,7 +935,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
               Gentle notifications
             </h2>
             <p className="text-sm text-[#5E5E5E] dark:text-[#A6A6A6]">
-              Unlit will only send milestone celebrations and one proactive nudge before your toughest craving window. No spam. Quiet hours strictly respected.
+              Tally will only send milestone celebrations and one proactive nudge before your toughest craving window. No spam. Quiet hours strictly respected.
             </p>
             <div className="p-4 rounded-3xl bg-[#F2F2F2] dark:bg-[#141414] border border-[#C4C4C4] dark:border-[#3D3D3D] text-xs space-y-1">
               <span className="font-bold block text-black dark:text-white">

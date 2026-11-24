@@ -68,7 +68,7 @@ export function generateCharacterCertificateMarkdown(params: {
 ${a.reasonForRestart ? `- **Reason for Slip/Restart:** ${a.reasonForRestart}` : ''}`
         )
         .join('\n\n')
-    : '_This is the user\'s primary recorded journey with Unlit._';
+    : '_This is the user\'s primary recorded journey with Tally._';
 
   // Badges earned
   const badgesList = badges.length > 0
@@ -91,7 +91,7 @@ ${a.reasonForRestart ? `- **Reason for Slip/Restart:** ${a.reasonForRestart}` : 
   return `# ðŸ“œ UNLIT CESSATION DOSSIER & CHARACTER CERTIFICATE
 > **Document Purpose:** Certified summary report of tobacco cessation, behavioral endurance, relapse-resilience, and chronological audit log. Suitable for sharing with healthcare professionals, counselors, or AI medical models.
 > **Generated on:** ${reportDate}
-> **Application:** Unlit (Offline-First Smoke Tracker)
+> **Application:** Tally (Offline-First Smoke Tracker)
 
 ---
 
@@ -150,6 +150,6 @@ ${recentEntries || '| No logs recorded yet | - | - | - | - |'}
 
 ---
 
-> **End of Certificate.** Exported with cryptographic integrity from Unlit Local Storage.
+> **End of Certificate.** Exported with cryptographic integrity from Tally Local Storage.
 `;
 }

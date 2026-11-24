@@ -1,4 +1,4 @@
-name: Unlit CI
+name: Tally CI
 
 on:
   push:

@@ -15,7 +15,7 @@ export async function syncWidget(d: {
   currency?: string;
   /** Cigarettes actually logged since the quit date, so the widget can net them out. */
   loggedCigs?: number;
-  /** Porn/fap streak anchor and lapse count, used by the "Unlit clean" widget. */
+  /** Porn/fap streak anchor and lapse count, used by the "Tally clean" widget. */
   fapStartDate?: string | number | Date;
   fapSlips?: number;
 }): Promise<void> {
