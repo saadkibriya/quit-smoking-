@@ -1,10 +1,18 @@
 import { UserPlan, Entry, ChatMessage } from '../types';
 import { isCravingResistedEvent, isSmokeEvent } from './calculations';
+import {
+  parseCoachCommands,
+  sanitizeEntryCommands,
+  sanitizePlanUpdates,
+  type CoachEntryCommand,
+} from './coachCommands';
 
 export interface CoachResponse {
   reply: string;
   isSafetyAlert?: boolean;
   suggestedPlanUpdates?: Partial<UserPlan>;
+  /** Entries to write verbatim — already validated, never raw model output. */
+  suggestedEntries?: CoachEntryCommand[];
   actionTakenDescription?: string;
 }
 
@@ -75,7 +83,7 @@ export async function askGeminiCoach(params: {
       // Loaded on demand: the SDK is ~300 kB and most sessions never use it.
       const { GoogleGenAI } = await import('@google/genai');
       const ai = new GoogleGenAI({ apiKey });
-      const systemInstruction = `You are the empathetic, doctor-backed, and proactive AI coach inside the Tally quit-smoking app.
+      const systemInstruction = `You are the empathetic, doctor-backed, and proactive AI coach inside the Quiter quit-smoking app.
 Your goals:
 1. Support, empower, and listen to the user. Speak warmly and practically.
 2. Monitor their live tracking data: ${JSON.stringify(dataSummary)}.
@@ -100,7 +108,22 @@ If you need to make changes to their plan or data, include a JSON block at the v
   "action": "Updated your pack price to 350 à§³ and set your quit date to 3 days ago."
 }
 \`\`\`
-If no plan update is needed, do NOT output a json code block. Just speak normally. Keep your text reply under 100 words unless detail is requested.`;
+LOGGING RULES (very important):
+- When the user says something happened, log it. Examples:
+  - "I smoked 10 minutes ago" -> entries: [{ "type": "CIGARETTE", "minutesAgo": 10 }]
+  - "one slip last night" -> entries: [{ "type": "FAP", "minutesAgo": 900 }]
+  - "I beat a craving 20 minutes ago" -> entries: [{ "type": "CRAVING_BEATEN", "minutesAgo": 20 }]
+  - "I fapped twice today" -> two entries of type "FAP"
+- Allowed entry types: "CIGARETTE", "CRAVING_BEATEN", "FAP", "FAP_URGE_BEATEN", "PLEDGE".
+- Entry fields: type (required), minutesAgo (preferred) or timestamp (ISO), triggers (array of short strings), cravingStrength/urgeStrength (1-10), note (short).
+- Only log what the user states already happened. Never log a hypothetical, a plan, a question, a worry, or "I want to smoke less". Never invent an entry to be helpful.
+- If they mention several events, include one entry per event (max 5).
+
+One JSON block may contain both "updates" (plan) and "entries" (logs):
+\`\`\`json
+{ "updates": { "packPrice": 12 }, "entries": [{ "type": "CIGARETTE", "minutesAgo": 10, "triggers": ["stress"] }], "action": "Logged your cigarette from 10 minutes ago and set the pack price to 12." }
+\`\`\`
+If neither is needed, do NOT output a json code block. Just speak normally. Keep your text reply under 100 words unless detail is requested.`;
 
       const contents: Array<{ role: 'user' | 'model'; parts: Array<{ text: string }> }> = [];
 
@@ -117,7 +140,7 @@ If no plan update is needed, do NOT output a json code block. Just speak normall
       });
 
       const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-3.8-flash',
         contents: contents as any,
         config: {
           systemInstruction,
@@ -128,6 +151,7 @@ If no plan update is needed, do NOT output a json code block. Just speak normall
 
       // Check if model returned JSON updates
       let suggestedPlanUpdates: Partial<UserPlan> | undefined = undefined;
+      let suggestedEntries: CoachEntryCommand[] = [];
       let actionTakenDescription: string | undefined = undefined;
       let cleanedReply = fullReply;
 
@@ -135,19 +159,20 @@ If no plan update is needed, do NOT output a json code block. Just speak normall
       if (jsonMatch) {
         try {
           const parsed = JSON.parse(jsonMatch[1]);
-          if (parsed.updates) {
-            suggestedPlanUpdates = parsed.updates;
-            actionTakenDescription = parsed.action;
-          }
+          suggestedPlanUpdates = sanitizePlanUpdates(parsed.updates);
+          suggestedEntries = sanitizeEntryCommands(parsed.entries, { plan });
+          actionTakenDescription =
+            typeof parsed.action === 'string' ? parsed.action : undefined;
           cleanedReply = fullReply.replace(/```json[\s\S]*?```/, '').trim();
         } catch {
-          // ignore parsing error
+          // A malformed block means no data changes; the reply still goes through.
         }
       }
 
       return {
         reply: cleanedReply,
         suggestedPlanUpdates,
+        suggestedEntries: suggestedEntries.length > 0 ? suggestedEntries : undefined,
         actionTakenDescription,
       };
     } catch (err: any) {
@@ -169,52 +194,45 @@ If no plan update is needed, do NOT output a json code block. Just speak normall
     });
     if (res.ok) {
       const data = await res.json();
+      const entries = sanitizeEntryCommands(data.entries, { plan });
       return {
         reply: data.reply || "I'm here with you. What strategy can we use right now?",
         isSafetyAlert: data.isSafetyAlert,
+        suggestedPlanUpdates: sanitizePlanUpdates(data.updates),
+        suggestedEntries: entries.length > 0 ? entries : undefined,
+        actionTakenDescription: typeof data.action === 'string' ? data.action : undefined,
       };
     }
   } catch {
     // offline
   }
 
-  // 5. Intelligent offline rules engine that also parses change commands
-  const lower = userMessage.toLowerCase();
-  const updates: Partial<UserPlan> = {};
-  let actionDesc = '';
+  // 5. Offline rules engine — same command grammar as the live model, so a
+  //    logged slip lands the same way whether or not a key is configured.
+  const commands = parseCoachCommands(userMessage, { plan });
+  const logged = commands.entries;
 
-  // Check if user is asking to change quit date offline
-  const quitAgoMatch = lower.match(/(quit|stopped|haven't smoked)\s*(since\s*)?(\d+)\s*(days?|hours?)/);
-  if (quitAgoMatch) {
-    const val = parseInt(quitAgoMatch[3], 10);
-    const unit = quitAgoMatch[4];
-    const msAgo = unit.startsWith('hour') ? val * 3600 * 1000 : val * 86400 * 1000;
-    const newQuitDate = new Date(Date.now() - msAgo).toISOString();
-    updates.quitStartDate = newQuitDate;
-    actionDesc = `Updated your quit time to ${val} ${unit} ago.`;
+  if (commands.clarification) {
+    return {
+      reply: commands.clarification,
+      suggestedPlanUpdates: commands.planUpdates,
+      actionTakenDescription: undefined,
+    };
   }
 
-  // Check if user wants BDT/taka or currency change
-  if (lower.includes('bdt') || lower.includes('taka') || lower.includes('à§³')) {
-    updates.currency = 'à§³';
-    actionDesc = (actionDesc ? actionDesc + ' ' : '') + 'Set currency to Bangladeshi Taka (à§³).';
-  }
+  const summary: string[] = [];
+  if (logged.length > 0) summary.push(logged.length > 1 ? `${logged.length} entries saved.` : 'Saved.');
+  if (commands.planUpdates) summary.push('Your plan is updated.');
 
-  // Check price change
-  const priceMatch = lower.match(/(price|pack)\s*(is|to)?\s*(\d+(\.\d+)?)/);
-  if (priceMatch) {
-    const p = parseFloat(priceMatch[3]);
-    updates.packPrice = p;
-    actionDesc = (actionDesc ? actionDesc + ' ' : '') + `Updated pack price to ${p}.`;
-  }
-
-  const hasUpdates = Object.keys(updates).length > 0;
+  const supportive =
+    logged.length > 0
+      ? 'A slip is information, not a verdict — one entry does not erase your progress. What was happening just before it? You can undo it from the log if it was a mistake.'
+      : 'I hear you. Take a slow, calm breath. Every craving rises like a wave and peaks within 3 to 5 minutes, then recedes. You are stronger than any urge. What activity or drink can we swap to right now?';
 
   return {
-    reply: hasUpdates
-      ? `Got it! I have updated your tracking plan accordingly (${actionDesc}). How are your cravings feeling right now?`
-      : `I hear you. Take a slow, calm breath. Every craving rises like a wave and peaks within 3 to 5 minutes, then recedes. You are stronger than any urge. What activity or drink can we swap to right now?`,
-    suggestedPlanUpdates: hasUpdates ? updates : undefined,
-    actionTakenDescription: actionDesc || undefined,
+    reply: `${summary.join(' ')} ${supportive}`.trim(),
+    suggestedPlanUpdates: commands.planUpdates,
+    suggestedEntries: logged.length > 0 ? logged : undefined,
+    actionTakenDescription: commands.description,
   };
 }

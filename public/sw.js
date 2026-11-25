@@ -1,11 +1,11 @@
 /**
- * Tally service worker — offline shell only.
+ * Quiter service worker — offline shell only.
  *
  * Deliberately minimal: the app stores its data in localStorage, so caching the
  * shell is enough for it to open and function with no network. No background
  * sync, no push, no analytics, nothing that phones home.
  */
-const CACHE = 'unlit-shell-v1';
+const CACHE = 'quiter-shell-v1';
 const SHELL = ['/', '/index.html', '/manifest.json'];
 
 self.addEventListener('install', (event) => {

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { UserPlan, Entry, ChatMessage, OtherHabit, HabitTarget } from '../../types';
 import { FAP_WARNINGS } from '../../content/fapGuidance';
+import { maskDiscreet } from '../../content/discreet';
 import { getFapStats, formatCleanTime } from '../../domain/fap';
 import { Sound } from '../../data/sound';
 import { Storage } from '../../data/storage';
@@ -10,6 +11,7 @@ import { ACADEMIC_SOURCES } from '../../content/sources';
 import { calculateDependenceScore, calculateCurrentStreak, calculateSmokeFreeDays, toLocalDateString } from '../../domain/calculations';
 import { getToneMessage } from '../../domain/rulesEngine';
 import { askGeminiCoach } from '../../domain/aiCoach';
+import { buildEntryFromCommand, describeCommands } from '../../domain/coachCommands';
 import { generateCharacterCertificateMarkdown } from '../../domain/markdownReport';
 import {
   Sun,
@@ -167,10 +169,21 @@ export const ToolkitTab: React.FC<ToolkitTabProps> = ({
         Storage.savePlan(updated);
       }
 
+      // Logged events ("I smoked 10 minutes ago"): the coach already validated
+      // and timestamped these, so they use the same Entry shape as the buttons.
+      const loggedNow = (coachResp.suggestedEntries ?? []).map(buildEntryFromCommand);
+      for (const entry of loggedNow) {
+        Storage.addEntry(entry);
+      }
+      const loggedNote =
+        loggedNow.length > 0
+          ? `\n\n✓ Logged: ${describeCommands(coachResp.suggestedEntries ?? [])}`
+          : '';
+
       onSaveChatMessage({
         id: `msg_reply_${Date.now()}`,
         sender: 'coach',
-        text: coachResp.reply,
+        text: `${coachResp.reply}${loggedNote}`.trim(),
         timestamp: Date.now(),
         isSafetyAlert: coachResp.isSafetyAlert,
       });
@@ -237,7 +250,7 @@ export const ToolkitTab: React.FC<ToolkitTabProps> = ({
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `Tally_Character_Certificate_${toLocalDateString(Date.now())}.md`;
+    a.download = `Quiter_Character_Certificate_${toLocalDateString(Date.now())}.md`;
     a.click();
   };
 
@@ -248,7 +261,7 @@ export const ToolkitTab: React.FC<ToolkitTabProps> = ({
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `unlit_backup_${toLocalDateString(Date.now())}.json`;
+    a.download = `quiter_backup_${toLocalDateString(Date.now())}.json`;
     a.click();
   };
 
@@ -259,7 +272,7 @@ export const ToolkitTab: React.FC<ToolkitTabProps> = ({
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `unlit_entries_${toLocalDateString(Date.now())}.csv`;
+    a.download = `quiter_entries_${toLocalDateString(Date.now())}.csv`;
     a.click();
   };
 
@@ -319,6 +332,32 @@ export const ToolkitTab: React.FC<ToolkitTabProps> = ({
         </div>
       </div>
 
+      {/* 1a. Discreet wording: neutral words on every screen, for privacy. */}
+      <div className="p-4 rounded-3xl bg-[#F2F2F2] dark:bg-[#141414] border border-[#C4C4C4] dark:border-[#3D3D3D] flex items-center justify-between gap-3">
+        <div>
+          <span className="text-xs font-bold text-black dark:text-white block">
+            Discreet wording
+          </span>
+          <span className="text-[11px] text-[#5E5E5E] dark:text-[#A6A6A6]">
+            Hide the explicit words on every screen. Your saved data never changes.
+          </span>
+        </div>
+        <button
+          onClick={() => {
+            Sound.tick();
+            onUpdatePlan({ ...plan, discreetMode: !plan.discreetMode });
+          }}
+          aria-pressed={plan.discreetMode === true}
+          className={`flex-none px-3 py-1.5 rounded-full text-xs font-bold transition ${
+            plan.discreetMode
+              ? 'bg-black text-white dark:bg-white dark:text-black'
+              : 'border border-[#C4C4C4] dark:border-[#3D3D3D] text-[#5E5E5E] dark:text-[#A6A6A6]'
+          }`}
+        >
+          {plan.discreetMode ? 'Hidden' : 'Off'}
+        </button>
+      </div>
+
       {/* 1b. Tracked habits (smoking / porn-fap) */}
       {(() => {
         const targets: HabitTarget[] =
@@ -349,7 +388,11 @@ export const ToolkitTab: React.FC<ToolkitTabProps> = ({
             <div className="rounded-3xl bg-[#F2F2F2] dark:bg-[#141414] border border-[#C4C4C4] dark:border-[#3D3D3D] overflow-hidden divide-y divide-[#C4C4C4] dark:divide-[#3D3D3D]">
               {[
                 { id: 'SMOKE' as HabitTarget, title: 'Smoking', desc: 'Cigarettes, vapes, shisha' },
-                { id: 'FAP' as HabitTarget, title: 'Porn / fap', desc: 'Compulsive porn use or masturbation' },
+                {
+                  id: 'FAP' as HabitTarget,
+                  title: maskDiscreet('Porn / fap'),
+                  desc: maskDiscreet('Compulsive porn use or masturbation'),
+                },
               ].map((habit) => {
                 const active = targets.includes(habit.id);
                 return (
@@ -426,11 +469,17 @@ export const ToolkitTab: React.FC<ToolkitTabProps> = ({
                       <label className="font-bold block mb-1">Target / day</label>
                       <input
                         type="number"
+                        inputMode="numeric"
                         min={0}
-                        value={plan.fapGoalPerDay}
-                        onChange={(e) =>
-                          onUpdatePlan({ ...plan, fapGoalPerDay: Math.max(0, Number(e.target.value)) })
-                        }
+                        placeholder="0"
+                        value={plan.fapGoalPerDay === 0 ? '' : plan.fapGoalPerDay}
+                        onChange={(e) => {
+                          const raw = e.target.value.replace(/^0+(?=\d)/, '');
+                          onUpdatePlan({
+                            ...plan,
+                            fapGoalPerDay: raw === '' ? 0 : Math.max(0, Number(raw)),
+                          });
+                        }}
                         className="w-full h-10 px-2.5 rounded-xl bg-white dark:bg-[#262626] border border-[#C4C4C4] dark:border-[#3D3D3D] font-mono font-bold"
                       />
                     </div>
@@ -456,10 +505,10 @@ export const ToolkitTab: React.FC<ToolkitTabProps> = ({
                           className="p-3 rounded-2xl bg-white dark:bg-[#000000] border border-[#C4C4C4] dark:border-[#3D3D3D]"
                         >
                           <span className="text-[11px] font-bold block text-black dark:text-white">
-                            {warning.title}
+                            {maskDiscreet(warning.title)}
                           </span>
                           <p className="text-[11px] text-[#5E5E5E] dark:text-[#A6A6A6]">
-                            {warning.body}
+                            {maskDiscreet(warning.body)}
                           </p>
                         </div>
                       ))}
@@ -629,7 +678,7 @@ export const ToolkitTab: React.FC<ToolkitTabProps> = ({
                 <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
                   {chatMessages.length === 0 ? (
                     <div className="p-3 rounded-2xl bg-[#F2F2F2] dark:bg-[#141414] text-xs text-[#5E5E5E] dark:text-[#A6A6A6]">
-                      "Hi! I'm your Tally coach. Ask me for a fast craving distraction, how to handle after-meal urges, or just say how today is going."
+                      "Hi! I'm your Quiter coach. Ask me for a fast craving distraction, how to handle after-meal urges, or just say how today is going."
                     </div>
                   ) : (
                     chatMessages.map((msg) => (
@@ -658,7 +707,7 @@ export const ToolkitTab: React.FC<ToolkitTabProps> = ({
                 <div className="flex items-center gap-2 pt-2">
                   <input
                     type="text"
-                    placeholder="Ask coach or say 'I quit 3 days ago'..."
+                    placeholder="Ask coach, or log: 'I smoked 10 minutes ago'..."
                     value={coachInput}
                     onChange={(e) => setCoachInput(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleSendCoach()}
@@ -906,7 +955,7 @@ export const ToolkitTab: React.FC<ToolkitTabProps> = ({
                   </h4>
                   <ul className="space-y-1 text-[11px] text-[#5E5E5E] dark:text-[#A6A6A6]">
                     {RED_FLAG_CRISIS_ALERTS.map((alert, i) => (
-                      <li key={i}>! {alert}</li>
+                      <li key={i}>! {maskDiscreet(alert)}</li>
                     ))}
                   </ul>
                 </div>
@@ -1172,9 +1221,15 @@ export const ToolkitTab: React.FC<ToolkitTabProps> = ({
                   </label>
                   <input
                     type="number"
+                    inputMode="decimal"
                     step="0.5"
-                    value={editPackPrice}
-                    onChange={(e) => setEditPackPrice(Number(e.target.value))}
+                    min={0}
+                    placeholder="0"
+                    value={editPackPrice === 0 ? '' : editPackPrice}
+                    onChange={(e) => {
+                      const raw = e.target.value.replace(/^0+(?=\d)/, '');
+                      setEditPackPrice(raw === '' ? 0 : Math.max(0, Number(raw)));
+                    }}
                     className="w-full h-11 px-3 rounded-xl bg-white dark:bg-[#262626] border border-[#C4C4C4] dark:border-[#3D3D3D] text-xs font-mono font-bold"
                   />
                 </div>
@@ -1241,7 +1296,7 @@ export const ToolkitTab: React.FC<ToolkitTabProps> = ({
 
         <div className="p-5 rounded-3xl bg-[#F2F2F2] dark:bg-[#141414] border border-[#C4C4C4] dark:border-[#3D3D3D] space-y-2">
           <p className="text-xs text-[#5E5E5E] dark:text-[#A6A6A6]">
-            Tally features 9 Nothing OS Glance widgets (W1–W9) with Chronometer live tickers:
+            Quiter features 9 Nothing OS Glance widgets (W1–W9) with Chronometer live tickers:
           </p>
           <button
             onClick={() => {
@@ -1269,10 +1324,10 @@ export const ToolkitTab: React.FC<ToolkitTabProps> = ({
                   Aggressive manufacturer battery savers (Samsung One UI, Xiaomi HyperOS, OnePlus OxygenOS) can freeze widget updates:
                 </p>
                 <ol className="list-decimal pl-4 space-y-1">
-                  <li>Open Android <strong className="text-black dark:text-white">Settings → Apps → Tally</strong>.</li>
+                  <li>Open Android <strong className="text-black dark:text-white">Settings → Apps → Quiter</strong>.</li>
                   <li>Tap <strong className="text-black dark:text-white">Battery</strong> and select <strong className="text-black dark:text-white">Unrestricted</strong>.</li>
                   <li>For Xiaomi/Redmi, enable <strong className="text-black dark:text-white">Autostart</strong> in app info.</li>
-                  <li>In Tally, Chronometer ticks independently on your home screen without draining battery.</li>
+                  <li>In Quiter, Chronometer ticks independently on your home screen without draining battery.</li>
                 </ol>
               </div>
             </details>
@@ -1672,7 +1727,7 @@ export const ToolkitTab: React.FC<ToolkitTabProps> = ({
                 Labs: Track Another Habit
               </span>
               <p className="text-[11px] text-[#5E5E5E] dark:text-[#A6A6A6] mb-2">
-                Apply Tally's slip-friendly engine to alcohol, sugar, or scrolling.
+                Apply Quiter's slip-friendly engine to alcohol, sugar, or scrolling.
               </p>
 
               {otherHabits.map((h) => (
@@ -1831,7 +1886,7 @@ export const ToolkitTab: React.FC<ToolkitTabProps> = ({
         <div className="p-5 rounded-3xl bg-[#F2F2F2] dark:bg-[#141414] border border-[#C4C4C4] dark:border-[#3D3D3D] space-y-3 text-xs">
           <div>
             <h4 className="font-bold text-black dark:text-white">
-              Tally: Free, Private, Offline-First
+              Quiter: Free, Private, Offline-First
             </h4>
             <p className="text-[11px] text-[#5E5E5E] dark:text-[#A6A6A6] mt-0.5">
               Built on peer-reviewed clinical research. No accounts, no paywall, no tracking SDKs. All data stays strictly on your phone.
@@ -1854,13 +1909,13 @@ export const ToolkitTab: React.FC<ToolkitTabProps> = ({
                     rel="noreferrer"
                     className="font-bold text-black dark:text-white underline block"
                   >
-                    {src.title} ({src.year})
+                    {maskDiscreet(src.title)} ({src.year})
                   </a>
                   <p className="text-[10px] text-[#5E5E5E] dark:text-[#A6A6A6]">
                     {src.authors} Â· {src.journal}
                   </p>
                   <p className="text-[10px] text-black dark:text-white mt-1">
-                    {src.takeaway}
+                    {maskDiscreet(src.takeaway)}
                   </p>
                 </div>
               ))}

@@ -16,6 +16,7 @@ import {
   isSmokeEvent,
 } from '../../domain/calculations';
 import { countUrgesBeaten, formatCleanTime, getFapStats } from '../../domain/fap';
+import { maskDiscreet } from '../../content/discreet';
 import { MILESTONES } from '../../content/milestones';
 import { BODY_RECOVERY_TIMELINE } from '../../content/bodyRecovery';
 import { Sound } from '../../data/sound';
@@ -188,7 +189,7 @@ export const JourneyTab: React.FC<JourneyTabProps> = ({
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-bold text-black dark:text-white flex items-center gap-1.5">
               <History className="w-4 h-4" />
-              <span>Fap log</span>
+              <span>{maskDiscreet('Fap log')}</span>
             </h3>
             <span className="text-[11px] font-semibold text-[#5E5E5E] dark:text-[#A6A6A6]">
               {fapEntries.length} entries · tap to edit
@@ -273,7 +274,9 @@ export const JourneyTab: React.FC<JourneyTabProps> = ({
       {fapStats && (
         <section className="p-4 rounded-3xl bg-[#F2F2F2] dark:bg-[#141414] border border-[#C4C4C4] dark:border-[#3D3D3D]">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-black dark:text-white">Porn / fap</h3>
+            <h3 className="text-sm font-bold text-black dark:text-white">
+              {maskDiscreet('Porn / fap')}
+            </h3>
             <span className="text-[10px] font-semibold text-[#5E5E5E] dark:text-[#A6A6A6]">
               {fapStats.lastLapseAt
                 ? `Last slip ${new Date(fapStats.lastLapseAt).toLocaleDateString(undefined, {
@@ -812,9 +815,17 @@ export const JourneyTab: React.FC<JourneyTabProps> = ({
                         tone: 'solid' as const,
                       }
                     : e.type === 'FAP'
-                      ? { icon: '•', label: 'Porn / fap slip logged', tone: 'outline' as const }
+                      ? {
+                          icon: '•',
+                          label: maskDiscreet('Porn / fap slip logged'),
+                          tone: 'outline' as const,
+                        }
                       : e.type === 'FAP_URGE_BEATEN'
-                        ? { icon: '✓', label: 'Urge ridden out (porn / fap)', tone: 'solid' as const }
+                        ? {
+                            icon: '✓',
+                            label: maskDiscreet('Urge ridden out (porn / fap)'),
+                            tone: 'solid' as const,
+                          }
                         : { icon: '★', label: 'Daily Pledge', tone: 'muted' as const };
 
               return (

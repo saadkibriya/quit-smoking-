@@ -26,6 +26,7 @@ import { getFapStats } from './domain/fap';
 import { syncWidget } from './widgetSync';
 import { drainWidgetLogs } from './widgetLogSync';
 import { MILESTONES } from './content/milestones';
+import { maskDiscreet, setDiscreetMode } from './content/discreet';
 import { RotateCcw } from 'lucide-react';
 
 export default function App() {
@@ -352,13 +353,17 @@ export default function App() {
     Storage.savePlan(updated);
   };
 
+  // Discreet wording is read from the plan on every render, before any child
+  // draws, so a toggle in Toolkit takes effect everywhere at once.
+  setDiscreetMode(plan.discreetMode === true);
+
   // Compute round status for top bar greeting
   const streak = calculateCurrentStreak(entries, plan.quitStartDate);
   const smokeFree = calculateSmokeFreeDays(entries, plan.quitStartDate);
   const round = calculateRoundStatus(streak.streakHours, smokeFree.completedSmokeFreeDays, entries);
 
   const dayGreeting = !tracksSmoke
-    ? 'Porn / fap tracking'
+    ? maskDiscreet('Porn / fap tracking')
     : plan.mode === 'QUIT'
       ? `Day ${smokeFree.completedSmokeFreeDays + 1} · ${round.currentRoundName}`
       : plan.mode === 'CUT_DOWN'
@@ -663,12 +668,12 @@ export default function App() {
           <div className="w-full max-w-md rounded-3xl bg-[#FFFFFF] dark:bg-[#0A0A0A] text-black dark:text-white border border-[#C4C4C4] dark:border-[#2A2A2A] p-5 space-y-3">
             <h2 className="text-xl font-black tracking-tight">What are you trying to quit?</h2>
             <p className="text-xs text-[#5E5E5E] dark:text-[#A6A6A6]">
-              Tally now tracks smoking and porn/fap separately. Pick what applies; you can
+              Quiter now tracks smoking and {maskDiscreet('porn/fap')} separately. Pick what applies; you can
               change it any time in Settings.
             </p>
             {[
               { label: 'Smoking', targets: ['SMOKE'] as HabitTarget[], desc: 'Cigarettes, vapes, shisha' },
-              { label: 'Porn or fap', targets: ['FAP'] as HabitTarget[], desc: 'Compulsive porn use or masturbation' },
+              { label: maskDiscreet('Porn or fap'), targets: ['FAP'] as HabitTarget[], desc: maskDiscreet('Compulsive porn use or masturbation') },
               { label: 'Both', targets: ['SMOKE', 'FAP'] as HabitTarget[], desc: 'Track both side by side' },
             ].map((option) => (
               <button

@@ -325,14 +325,14 @@ export const HomeScreenWidgetSimulator: React.FC<HomeScreenWidgetSimulatorProps>
 
           <div className="p-4 rounded-3xl border border-[#C4C4C4] dark:border-[#2A2A2A] space-y-1 text-[11px] text-[#5E5E5E] dark:text-[#8A8A8A]">
             <span className="block text-xs font-bold text-black dark:text-white mb-1">How to add one</span>
-            <p>Long-press an empty spot on the home screen → Widgets → Tally.</p>
+            <p>Long-press an empty spot on the home screen → Widgets → Quiter.</p>
             <p>Drag out Days, Streak or Both, then long-press it and pick Edit to change how it looks.</p>
           </div>
         </div>
 
         <div className="pt-3 border-t border-[#C4C4C4] dark:border-[#2A2A2A] mt-3 flex items-center gap-1.5 text-[11px] text-[#5E5E5E] dark:text-[#8A8A8A] shrink-0">
           <Info className="w-3.5 h-3.5 shrink-0" />
-          <span>Tapping a bar opens Tally. Nothing on it names a habit.</span>
+          <span>Tapping a bar opens Quiter. Nothing on it names a habit.</span>
         </div>
       </div>
     </div>

@@ -10,9 +10,9 @@ const simulator = readFileSync('src/components/widgets/HomeScreenWidgetSimulator
 
 // Test 1: the launcher name is the discreet one, and the applicationId keeps
 // the old package so updates install over the previous version with its data.
-assert.strictEqual(capacitor.appName, 'Tally', 'launcher name');
+assert.strictEqual(capacitor.appName, 'Quiter', 'launcher name');
 assert.strictEqual(capacitor.appId, 'com.unlit.app', 'appId must stay stable for updates');
-console.log('✓ Test 1: launcher name is Tally and appId is unchanged.');
+console.log('✓ Test 1: launcher name is Quiter and appId is unchanged.');
 
 // Test 2: everything the widget picker shows stays generic. Descriptions and
 // names appear in a list anyone holding the phone can open.

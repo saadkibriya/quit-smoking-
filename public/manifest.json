@@ -1,7 +1,7 @@
 {
   "id": "/",
-  "name": "Tally",
-  "short_name": "Tally",
+  "name": "Quiter",
+  "short_name": "Quiter",
   "description": "A private, offline-first counter for the streaks you care about. Everything stays on this phone.",
   "lang": "en",
   "dir": "ltr",
@@ -55,7 +55,7 @@
       "icons": [{ "src": "/assets/icon-192.png", "sizes": "192x192", "type": "image/png" }]
     },
     {
-      "name": "Tally",
+      "name": "Quiter",
       "short_name": "Open app",
       "description": "Open the tracker",
       "url": "/",

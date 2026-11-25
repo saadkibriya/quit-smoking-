@@ -12,3 +12,6 @@ coverage/
 
 # Local screenshots from browser verification
 /artifacts/
+
+# MCP server store (local tracking data, never committed)
+/data/

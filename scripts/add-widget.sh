@@ -42,7 +42,7 @@ rm -f "$PKG_DIR/QuitWidgetProvider.java" \
 # Values come from the web layer through @capacitor/preferences
 # (SharedPreferences file "CapacitorStorage", raw keys).
 # ---------------------------------------------------------------------------
-cat > "$PKG_DIR/UnlitWidgetBase.java" <<'EOF'
+cat > "$PKG_DIR/QuiterWidgetBase.java" <<'EOF'
 package __APP_ID__;
 
 import android.app.PendingIntent;
@@ -70,7 +70,7 @@ import org.json.JSONObject;
  * figure}. `Both` puts two such groups side by side. Nothing on the bar names
  * the habit; the widget only ever shows a plain count.
  */
-public abstract class UnlitWidgetBase extends AppWidgetProvider {
+public abstract class QuiterWidgetBase extends AppWidgetProvider {
     public static final String ACTION_REFRESH = "com.unlit.app.REFRESH_WIDGET";
 
     static final String PREFS = "CapacitorStorage";
@@ -445,13 +445,13 @@ public abstract class UnlitWidgetBase extends AppWidgetProvider {
     }
 }
 EOF
-sed -i "s/__APP_ID__/$APP_ID/g" "$PKG_DIR/UnlitWidgetBase.java"
+sed -i "s/__APP_ID__/$APP_ID/g" "$PKG_DIR/QuiterWidgetBase.java"
 
 cat > "$PKG_DIR/SmokeWidgetProvider.java" <<'EOF'
 package __APP_ID__;
 
 /** The plain day-count bar for the smoke tracker. */
-public class SmokeWidgetProvider extends UnlitWidgetBase {
+public class SmokeWidgetProvider extends QuiterWidgetBase {
     @Override
     protected int mode() {
         return MODE_SMOKE;
@@ -464,7 +464,7 @@ cat > "$PKG_DIR/FapWidgetProvider.java" <<'EOF'
 package __APP_ID__;
 
 /** The plain streak bar for the second habit. */
-public class FapWidgetProvider extends UnlitWidgetBase {
+public class FapWidgetProvider extends QuiterWidgetBase {
     @Override
     protected int mode() {
         return MODE_FAP;
@@ -477,7 +477,7 @@ cat > "$PKG_DIR/BothWidgetProvider.java" <<'EOF'
 package __APP_ID__;
 
 /** Both counts side by side in one Google-search-bar footprint. */
-public class BothWidgetProvider extends UnlitWidgetBase {
+public class BothWidgetProvider extends QuiterWidgetBase {
     @Override
     protected int mode() {
         return MODE_BOTH;
@@ -515,7 +515,7 @@ import java.util.List;
 /** Settings sheet for one placed widget: theme, accent, and what it shows. */
 public class WidgetConfigActivity extends Activity {
     private int widgetId = AppWidgetManager.INVALID_APPWIDGET_ID;
-    private int mode = UnlitWidgetBase.MODE_SMOKE;
+    private int mode = QuiterWidgetBase.MODE_SMOKE;
 
     private int themeIndex = 0;
     private int accentIndex = 0;
@@ -549,12 +549,12 @@ public class WidgetConfigActivity extends Activity {
         AppWidgetManager manager = AppWidgetManager.getInstance(this);
         AppWidgetProviderInfo info = manager.getAppWidgetInfo(widgetId);
         String cls = info != null && info.provider != null ? info.provider.getClassName() : "";
-        mode = UnlitWidgetBase.modeFor(cls);
+        mode = QuiterWidgetBase.modeFor(cls);
 
-        SharedPreferences sp = UnlitWidgetBase.settings(this);
-        String theme = sp.getString(UnlitWidgetBase.key(widgetId, "theme"), "auto");
-        String accent = sp.getString(UnlitWidgetBase.key(widgetId, "accent"), "mono");
-        int display = sp.getInt(UnlitWidgetBase.key(widgetId, "display"), UnlitWidgetBase.SHOW_DAYS);
+        SharedPreferences sp = QuiterWidgetBase.settings(this);
+        String theme = sp.getString(QuiterWidgetBase.key(widgetId, "theme"), "auto");
+        String accent = sp.getString(QuiterWidgetBase.key(widgetId, "accent"), "mono");
+        int display = sp.getInt(QuiterWidgetBase.key(widgetId, "display"), QuiterWidgetBase.SHOW_DAYS);
 
         for (int i = 0; i < THEME_VALUES.length; i++) {
             if (THEME_VALUES[i].equals(theme)) themeIndex = i;
@@ -592,7 +592,7 @@ public class WidgetConfigActivity extends Activity {
         root.addView(title);
 
         TextView caption = new TextView(this);
-        caption.setText(mode == UnlitWidgetBase.MODE_BOTH
+        caption.setText(mode == QuiterWidgetBase.MODE_BOTH
                 ? "Two counters in one bar"
                 : "One bar, your numbers");
         caption.setTextColor(muted);
@@ -608,9 +608,9 @@ public class WidgetConfigActivity extends Activity {
         section(root, "Accent");
         row(root, accentPills, new String[]{"Mono", "Green", "Amber", "Blue"}, new int[]{0, 1, 2, 3});
 
-        if (mode != UnlitWidgetBase.MODE_BOTH) {
+        if (mode != QuiterWidgetBase.MODE_BOTH) {
             section(root, "Shows");
-            if (mode == UnlitWidgetBase.MODE_FAP) {
+            if (mode == QuiterWidgetBase.MODE_FAP) {
                 row(root, displayPills, new String[]{"Days", "Time"}, new int[]{0, 1});
             } else {
                 row(root, displayPills,
@@ -642,7 +642,7 @@ public class WidgetConfigActivity extends Activity {
     }
 
     private int maxDisplayIndex() {
-        return mode == UnlitWidgetBase.MODE_FAP ? 1 : 3;
+        return mode == QuiterWidgetBase.MODE_FAP ? 1 : 3;
     }
 
     private void section(LinearLayout root, String text) {
@@ -719,15 +719,15 @@ public class WidgetConfigActivity extends Activity {
     }
 
     private void save() {
-        SharedPreferences.Editor editor = UnlitWidgetBase.settings(this).edit();
-        editor.putString(UnlitWidgetBase.key(widgetId, "theme"), THEME_VALUES[themeIndex]);
-        editor.putString(UnlitWidgetBase.key(widgetId, "accent"), ACCENT_VALUES[accentIndex]);
-        if (mode != UnlitWidgetBase.MODE_BOTH) {
-            editor.putInt(UnlitWidgetBase.key(widgetId, "display"), displayIndex);
+        SharedPreferences.Editor editor = QuiterWidgetBase.settings(this).edit();
+        editor.putString(QuiterWidgetBase.key(widgetId, "theme"), THEME_VALUES[themeIndex]);
+        editor.putString(QuiterWidgetBase.key(widgetId, "accent"), ACCENT_VALUES[accentIndex]);
+        if (mode != QuiterWidgetBase.MODE_BOTH) {
+            editor.putInt(QuiterWidgetBase.key(widgetId, "display"), displayIndex);
         }
         editor.apply();
 
-        UnlitWidgetBase.updateNow(this, widgetId);
+        QuiterWidgetBase.updateNow(this, widgetId);
         Intent result = new Intent();
         result.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId);
         setResult(RESULT_OK, result);
@@ -844,8 +844,8 @@ public class SmokeQuickLogActivity extends Activity {
                 count = 0;
             }
             if (count > 0) {
-                UnlitWidgetBase.appendPendingLog(this, count);
-                UnlitWidgetBase.refreshAll(this);
+                QuiterWidgetBase.appendPendingLog(this, count);
+                QuiterWidgetBase.refreshAll(this);
             }
             finish();
         });
@@ -1120,7 +1120,7 @@ cat > "$MAIN/res/values/widget_strings.xml" <<'EOF'
     <string name="widget_streak_description">A streak counter at a glance.</string>
     <string name="widget_both_name">Both</string>
     <string name="widget_both_description">Two counts side by side.</string>
-    <style name="UnlitQuickLog" parent="@android:style/Theme.DeviceDefault.Dialog">
+    <style name="QuiterQuickLog" parent="@android:style/Theme.DeviceDefault.Dialog">
         <item name="android:windowBackground">@android:color/transparent</item>
         <item name="android:windowIsFloating">true</item>
         <item name="android:windowNoTitle">true</item>
@@ -1145,22 +1145,22 @@ public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        UnlitWidgetBase.refreshAll(this);
+        QuiterWidgetBase.refreshAll(this);
         // The web layer writes its values a moment later, so refresh once more
         // after the first paint instead of waiting for the user to leave.
         new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(
-            () -> UnlitWidgetBase.refreshAll(this), 2500L);
+            () -> QuiterWidgetBase.refreshAll(this), 2500L);
     }
 
     @Override
     public void onResume() {
         super.onResume();
-        UnlitWidgetBase.refreshAll(this);
+        QuiterWidgetBase.refreshAll(this);
     }
 
     @Override
     public void onPause() {
-        UnlitWidgetBase.refreshAll(this);
+        QuiterWidgetBase.refreshAll(this);
         super.onPause();
     }
 }
@@ -1213,7 +1213,7 @@ receivers += '''
             android:name=".WidgetConfigActivity"
             android:exported="true"
             android:excludeFromRecents="true"
-            android:theme="@style/UnlitQuickLog">
+            android:theme="@style/QuiterQuickLog">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
             </intent-filter>
@@ -1223,7 +1223,7 @@ receivers += '''
             android:name=".SmokeQuickLogActivity"
             android:exported="false"
             android:excludeFromRecents="true"
-            android:theme="@style/UnlitQuickLog"
+            android:theme="@style/QuiterQuickLog"
             android:windowSoftInputMode="stateVisible|adjustResize" />
 '''
 

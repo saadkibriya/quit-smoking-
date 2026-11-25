@@ -1,6 +1,149 @@
-# CHANGELOG — Unlit Quit-Smoking Tracker
+# CHANGELOG — Quiter Quit-Smoking Tracker
 
-All notable changes to Unlit are documented here per `infos.md` (Worker Rules) and `roadmap.md`.
+All notable changes to Quiter are documented here per `infos.md` (Worker Rules) and `roadmap.md`.
+
+## [2026-11-25] — Coach and onboarding parser on the current Gemini model
+
+### Fixed
+- **The key-path coach no longer calls a retired model.** `src/domain/aiCoach.ts` still requested
+  `gemini-2.5-flash`, which Google deprecated on 2 November 2026, so a person using their own API
+  key got an error and fell back to the offline coach while the server routes worked. It now uses
+  `gemini-3.8-flash`, the same model as `/api/gemini/coach`, `/api/gemini/weekly-review`,
+  `/api/gemini/onboard` and `/api/gemini/ifthen-plan`.
+- **The onboarding text parser was on the same retired model.** `src/domain/aiParser.ts` asked
+  `gemini-2.5-flash` to turn a free-text description into a quit plan, so that shortcut failed and
+  silently fell back to the offline regex parser. It now uses `gemini-3.8-flash` as well, so every
+  model call in the app and in the server routes is on one current model.
+
+## [2026-11-25] — The app serves its own MCP server at /api/mcp
+
+### Added
+- **Quiter now hosts its MCP server itself**, the same way as the finance app this was modelled
+  on: the running server exposes Streamable HTTP at `POST /api/mcp`, so an AI client connects by
+  URL instead of launching a script —
+  `gemini mcp add -s user --transport http quiter http://localhost:3001/api/mcp`.
+  `log_entry`, `update_plan` and `get_stats` are unchanged; the endpoint is stateless (one server
+  per request), answers with JSON, and returns 405 to `GET`/`DELETE` because it offers no SSE
+  stream. It needs no key, no OAuth and no account, and binds to localhost only by convention —
+  do not expose it publicly, as it has no authentication.
+- The tool definitions moved to `mcp/register.ts`, shared by the HTTP endpoint and the stdio entry
+  (`npm run mcp`), so the two transports can never drift.
+- `test/mcpServer.test.ts` (10 checks) drives the registered tools through a real MCP client:
+  tool listing, store seeding, `log_entry`, `update_plan`, `get_stats`, the `.bak` write, and
+  rejection of bad entry types, unknown plan fields and future timestamps.
+
+### Changed
+- `mcp/README.md` now leads with the app-hosted URL (the one-command Gemini CLI setup), keeps
+  stdio as the alternative, and adds a curl initialize check.
+
+## [2026-11-25] — The coach can log entries, with or without an API key
+
+### Added
+- **Log through the coach chat.** "I smoked 10 minutes ago", "one slip last night", "I had two
+  cigarettes yesterday", "I beat a craving 20 minutes ago" and "I pledge" now write real entries
+  with the stated time, triggers and strength — same `Entry` shape as the app's own buttons, so
+  streaks, avoided cigarettes, money and the progress log update immediately. Each reply ends with
+  an explicit receipt (`✓ Logged: cigarette · 10 min ago`), and a wrong log can be undone.
+- **One command grammar for the live model and the offline fallback** (`src/domain/coachCommands.ts`).
+  The Gemini path (direct key or server proxy) asks for an `entries` array alongside `updates`; the
+  offline rules engine parses the same phrasing, so logging works with no key and no network.
+- Time phrasing: `N minutes/hours/days ago`, `just now`, `last night` (22:00 the day before),
+  `yesterday`, `this morning`, `at 9pm`. Counts: `twice`, `two cigarettes`, `one slip` (capped at 5
+  per message); repeated identical events in the same minute are merged.
+- **Nothing is logged from a question, an intention or a negation** — "how do I stop smoking?",
+  "I want to smoke less", "I haven't smoked in 3 days" and "I'm thinking about smoking" stay silent.
+- **Ambiguity is asked, not guessed.** With both habits tracked, a bare "one slip last night" logs
+  nothing and asks which habit, then accepts the whole sentence with its time.
+- Model-written data is validated before it is written: entry types are whitelisted, future
+  timestamps are clamped, `undone`/unknown fields are dropped, and plan changes are restricted to
+  fields the app owns.
+- `test/coachLogging.test.ts` (16 checks) covers the phrases, the guards, validation and both coach
+  paths; `npm test` runs it.
+
+### Changed
+- The coach's offline reply no longer repeats the receipt; the chat bubble shows it once.
+- `/api/gemini/coach` now returns validated `entries`/`updates` (and a cleaned reply) so a
+  server-side key can log entries too, not just change plan settings.
+
+## [2026-11-25] — Local MCP server: log entries, update the plan, read stats from an AI agent
+
+### Added
+- **An MCP server (`mcp/server.ts`, stdio) with three tools** — `log_entry` (cigarette,
+  craving ridden out, second-habit slip or urge, daily pledge), `update_plan` (quit date,
+  pack price/count, usual per day, triggers, reasons, targets, currency, coach style,
+  savings goal, health flags) and `get_stats` (streak, smoke-free days, avoided cigarettes,
+  money kept, cravings beaten, second-habit clean time and lapses, top triggers). Run it with
+  `npm run mcp`; wiring for Gemini CLI is in `mcp/README.md`.
+- **The server's store is the app's own Export JSON** (`data/quiter-store.json`, git-ignored,
+  override with `QUITER_STORE`), so an app export drops straight in and the store file imports
+  back through Toolkit → Backup → Import JSON. Writes are atomic and the previous version is
+  kept as `.bak`.
+- Numbers come from the app's existing domain code, so the agent reports what the app shows.
+
+### Changed
+- **Import JSON now restores second habits.** Exports always carried `otherHabits`, but the
+  importer silently dropped them, so an export → import round-trip (or a store file from the
+  MCP server) lost second-habit data.
+- The MCP server lives outside `src/` and is never imported by the app, so it adds nothing to
+  the web or APK bundle; `@modelcontextprotocol/sdk` and `zod` are used only by it.
+
+## [2026-11-25] — Discreet wording, fap step Continue, no leading zero in price
+
+### Added
+- **Discreet wording switch** (`src/content/discreet.ts`, plan field `discreetMode`).
+  Off by default. When the person turns it on — in onboarding step 1 or in Toolkit →
+  Discreet wording — every screen swaps “porn” and “fap” for neutral words ("adult
+  content", "habit", "second habit"). It is a render-time mask only: entries, storage
+  keys and exports are untouched, and switching it off restores the normal copy.
+  Covered: header greeting, onboarding, home and fap cards, journey log, toolkit habit
+  row and warning cards, the recovery timeline, community tips, doctor notes, the health
+  red-flag list, the citation titles/takeaways and the settings button's screen-reader
+  label.
+
+### Fixed
+- **Price per pack no longer starts with a stray 0.** Typing `240` into a field showing
+  the default `0` produced `0240`; the field is now empty at zero and strips leading
+  zeros on input. Same treatment for cigarettes per pack and the fap “usual times” /
+  “daily target” inputs in onboarding and Toolkit settings.
+- **The porn/fap setup step has its Continue button.** That step runs after the plan
+  card, so the shared footer (`step < 15`) hid it and the wizard could not be finished
+  from there. The footer now shows on every step except the final plan card.
+- `npm test` also runs the new discreet-wording suite.
+
+## [2026-11-24] — Renamed from Tally to Quiter
+
+### Changed
+- **The app is now called Quiter.** Launcher label (`capacitor.config.json`), PWA manifest
+  name and shortcut, page title and meta tags, header wordmark, onboarding and the coach
+  prompts all use the new name.
+- Every user-facing artefact follows the new name: the character certificate (heading and
+  `Quiter_Character_Certificate_*.md`), the JSON/CSV exports (`quiter_backup_*`,
+  `quiter_entries_*`) and the APK release asset `Quiter.apk`. CI and the APK build workflow
+  are renamed, and the Android widget generator's Java classes and dialog style are
+  `Quiter*`.
+- The `applicationId` (`com.unlit.app`) and storage keys are untouched, so an existing
+  install updates in place with its data.
+
+## [2026-11-24] — Porn/fap recovery timeline, doctor framing and community tips
+
+### Added
+- **“What happens next” timeline for the porn/fap tracker** (`src/content/fapRecovery.ts`),
+  in the same shape as the smoking body-recovery timeline: 1 hour, 12 hours, 1 day,
+  2–3 days, 1 week, 2–4 weeks, 4–8 weeks (the reported “flatline”), 2–3 months and
+  90 days. Each stage carries a real evidence label (Moderate / Early research /
+  Estimate), a doctor’s note and its source, and the card marks where the user is now.
+- **Honest framing rather than reboot lore.** The copy states that nothing is being
+  flushed out, that a randomised 7-day trial found no measurable withdrawal except a
+  craving effect in daily users, and that the 90-day mark is a community number with no
+  trial behind it.
+- **“What people actually use”** — eight tactics from r/NoFap and r/pornfree (phone out
+  of the bedroom, make relapse take effort, 120 seconds of cold water, one person who
+  knows, plan the trigger), plus a “what the same threads say did not work” card.
+- **“The doctor’s position”** — ICD-11 compulsive sexual behaviour disorder as an
+  impulse-control disorder (not an official addiction), therapy as first-line treatment,
+  no licensed detox drug, and when to seek help.
+- Fap home card shows the next stage ahead (`→ 1 day: first real urge if you were daily`).
+- Five references added to the Toolkit source list.
 
 ## [2026-11-24] — Three search-bar widgets with their own settings
 

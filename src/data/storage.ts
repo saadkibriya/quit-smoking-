@@ -94,6 +94,7 @@ export const DEFAULT_PLAN: UserPlan = {
   cigarettesPerPack: 20,
   packPrice: 10,
   packPriceHistory: [{ price: 10, effectiveFromDate: '2026-01-01' }],
+  discreetMode: false,
   currency: '৳',
   weekStartDay: 'MONDAY',
   wakeTime: '07:00',
@@ -385,6 +386,9 @@ export const Storage = {
       if (Array.isArray(data.attempts)) this.saveAttempts(data.attempts);
       if (Array.isArray(data.badges)) localStorage.setItem(STORAGE_KEYS.BADGES, JSON.stringify(data.badges));
       if (Array.isArray(data.toolStats)) localStorage.setItem(STORAGE_KEYS.TOOL_STATS, JSON.stringify(data.toolStats));
+      // Exports have always carried otherHabits; restore them too, so an
+      // export → import round-trip (or an MCP store file) loses nothing.
+      if (Array.isArray(data.otherHabits)) this.saveOtherHabits(data.otherHabits);
       notify();
       return true;
     } catch (e) {

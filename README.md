@@ -1,6 +1,6 @@
-# Tally — Evidence-Based Quit-Smoking Tracker & Dual-Persona Mentor
+# Quiter — Evidence-Based Quit-Smoking Tracker & Dual-Persona Mentor
 
-**Tally** is a free, private, offline-first quit-smoking tracker and dual-persona mentor ("The Doctor" + "The Coach") designed around clinical addiction science. Built with strict Google Pixel monochrome aesthetics (solid surfaces, true OLED black #000000 and crisp white #FFFFFF).
+**Quiter** is a free, private, offline-first quit-smoking tracker and dual-persona mentor ("The Doctor" + "The Coach") designed around clinical addiction science. Built with strict Google Pixel monochrome aesthetics (solid surfaces, true OLED black #000000 and crisp white #FFFFFF).
 
 ---
 
@@ -51,6 +51,11 @@
    - On-device client safety filter: crisis phrases immediately show emergency crisis guidance without sending data to AI.
    - Offline rules engine fallback ensures 100% functionality even when offline or without an API key.
 
+8. **First-party MCP server — use Quiter from Gemini**:
+   - The app server hosts a Model Context Protocol endpoint at `POST /api/mcp` (Streamable HTTP) with `log_entry`, `update_plan` and `get_stats`, so an AI client connects by URL:
+     `gemini mcp add -s user --transport http quiter http://localhost:3001/api/mcp`.
+   - The same tools run over stdio (`npm run mcp`). Both read and write one JSON file in the app's Export JSON shape, so app → agent → app is lossless, and nothing from `mcp/` ships in the web or APK bundle. Details: [`mcp/README.md`](mcp/README.md).
+
 ---
 
 ## Technical Stack & Folder Structure
@@ -61,7 +66,8 @@
 
 ```
 /
-├── server.ts                       # Express backend with Gemini API proxy & Vite dev middleware
+├── server.ts                       # Express backend with Gemini API proxy, /api/mcp & Vite dev middleware
+├── mcp/                            # MCP server: register.ts (tools), server.ts (stdio), store.ts (JSON file)
 ├── test/
 │   └── calculations.test.ts        # Pure calculation unit test suite
 ├── src/
@@ -118,4 +124,7 @@ npm run build
 
 # Start full-stack dev server
 npm run dev
+
+# Use Quiter from Gemini CLI while the server is running
+gemini mcp add -s user --transport http quiter http://localhost:3001/api/mcp
 ```

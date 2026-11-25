@@ -2,6 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { Entry, UserPlan } from '../../types';
 import { countUrgesBeaten, formatCleanTime, formatDurationLong, getFapStats } from '../../domain/fap';
 import { FAP_URGE_TOOLS, FAP_WARNING_HINTS, FAP_WARNINGS } from '../../content/fapGuidance';
+import { getNextFapStage } from '../../content/fapRecovery';
+import { maskDiscreet } from '../../content/discreet';
+import { FapCommunityTips, FapDoctorTake, FapRecoveryTimeline } from './FapRecovery';
 import { GlassCard } from '../home/GlassCard';
 import { Plus, Settings2, ShieldAlert } from 'lucide-react';
 
@@ -40,12 +43,13 @@ export const FapCard: React.FC<FapCardProps> = ({
 
   const stats = getFapStats(entries, plan.fapStartDate, now);
   const urges = countUrgesBeaten(entries, 7, now);
+  const nextStage = getNextFapStage(stats.cleanMs / 3600000);
 
   return (
     <GlassCard className={className} style={style}>
       <div className="flex items-start justify-between">
         <div>
-          <span className="home-label">Porn / fap-free</span>
+          <span className="home-label">{maskDiscreet('Porn / fap-free')}</span>
           <div className="home-num mt-1 text-[34px]">{formatCleanTime(stats)}</div>
         </div>
         <div className="flex items-center gap-2">
@@ -61,7 +65,7 @@ export const FapCard: React.FC<FapCardProps> = ({
           {onOpenSettings && (
             <button
               onClick={onOpenSettings}
-              aria-label="Open fap tracking settings"
+              aria-label={maskDiscreet('Open fap tracking settings')}
               className="home-press flex h-8 w-8 items-center justify-center rounded-full"
               style={{ background: 'var(--chip)' }}
             >
@@ -94,6 +98,11 @@ export const FapCard: React.FC<FapCardProps> = ({
           ? `Last slip ${formatDurationLong(now - stats.lastLapseAt)} ago`
           : 'No slips logged yet.'}{' '}
         &middot; Watch for {FAP_WARNING_HINTS.join(' \u00B7 ').toLowerCase()}
+      </div>
+
+      <div className="home-body mt-1.5 text-[11px]">
+        <span style={{ color: 'var(--green)' }}>&rarr;</span> {nextStage.timeLabel}:{' '}
+        {nextStage.short}
       </div>
 
       <div className="mt-3 flex items-center gap-2">
@@ -142,6 +151,7 @@ export const FapHome: React.FC<FapHomeProps> = ({
 
   const stats = getFapStats(entries, plan.fapStartDate, now);
   const urges = countUrgesBeaten(entries, 7, now);
+  const cleanHours = stats.cleanMs / 3600000;
   const bestClean =
     stats.longestCleanHours >= 24
       ? `${Math.floor(stats.longestCleanHours / 24)}d`
@@ -180,7 +190,7 @@ export const FapHome: React.FC<FapHomeProps> = ({
         </div>
 
         <div className="home-rise mt-6">
-          <h1 className="home-title text-[26px]">Porn / fap-free</h1>
+          <h1 className="home-title text-[26px]">{maskDiscreet('Porn / fap-free')}</h1>
           <p className="home-body mt-1 text-[13px]">
             Tracked from {new Date(plan.fapStartDate).toLocaleDateString(undefined, {
               day: 'numeric',
@@ -237,15 +247,47 @@ export const FapHome: React.FC<FapHomeProps> = ({
           </button>
         </div>
 
+        <div className="home-rise mt-8" style={{ animationDelay: '200ms' }}>
+          <h2 className="home-title text-[18px]">What happens next</h2>
+          <p className="home-body mt-1 text-[12px]">
+            Each stage carries its real evidence level. This one is honest: there is no
+            nicotine-style clearance curve here, and the popular 90-day mark is a
+            community number, not a measured cure.
+          </p>
+          <div className="mt-3">
+            <FapRecoveryTimeline cleanHours={cleanHours} />
+          </div>
+        </div>
+
+        <div className="home-rise mt-8" style={{ animationDelay: '240ms' }}>
+          <h2 className="home-title text-[18px]">What people actually use</h2>
+          <p className="home-body mt-1 text-[12px]">
+            From long-streak posts on Reddit, kept close to how they said it. Community
+            reports, not clinical advice.
+          </p>
+          <div className="mt-3">
+            <FapCommunityTips />
+          </div>
+        </div>
+
+        <div className="home-rise mt-8" style={{ animationDelay: '260ms' }}>
+          <h2 className="home-title text-[18px]">The doctor's position</h2>
+          <div className="mt-3">
+            <FapDoctorTake />
+          </div>
+        </div>
+
         <div className="home-rise mt-8" style={{ animationDelay: '220ms' }}>
           <h2 className="home-title text-[18px]">Worth remembering</h2>
           <div className="mt-3 space-y-2">
             {FAP_WARNINGS.slice(0, 4).map((warning) => (
               <GlassCard key={warning.id} padding="p-4">
                 <span className="home-body text-[12px] font-extrabold" style={{ color: 'var(--ink)' }}>
-                  {warning.title}
+                  {maskDiscreet(warning.title)}
                 </span>
-                <p className="home-body mt-1 text-[12px] leading-snug">{warning.body}</p>
+                <p className="home-body mt-1 text-[12px] leading-snug">
+                  {maskDiscreet(warning.body)}
+                </p>
               </GlassCard>
             ))}
           </div>
@@ -259,7 +301,7 @@ export const FapHome: React.FC<FapHomeProps> = ({
                 <span style={{ color: 'var(--green)' }} aria-hidden="true">
                   &bull;
                 </span>
-                {tip}
+                {maskDiscreet(tip)}
               </li>
             ))}
           </ul>

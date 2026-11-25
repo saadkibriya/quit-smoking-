@@ -17,7 +17,7 @@ import {
 import { Entry, UserPlan } from '../src/types';
 import { DEFAULT_PLAN } from '../src/data/storage';
 
-console.log('--- RUNNING UNLIT SECTION 4 CALCULATION UNIT TESTS ---');
+console.log('--- RUNNING QUITER SECTION 4 CALCULATION UNIT TESTS ---');
 
 // Test 1: Dependence Score (Heaviness of Smoking Index 0-6)
 {

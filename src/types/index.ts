@@ -142,6 +142,8 @@ export interface UserPlan {
   cutDownSchedule?: CutDownSchedule;
   onboardingCompleted: boolean;
   themePreference: 'DAY' | 'NIGHT' | 'AUTO';
+  /** True when the person asked to hide the explicit habit words on screen. */
+  discreetMode?: boolean;
   aiCoachEnabled: boolean;
   quietHoursEnabled: boolean;
   riskyHourNudgeEnabled: boolean;

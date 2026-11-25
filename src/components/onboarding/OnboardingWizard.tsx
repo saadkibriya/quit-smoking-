@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { UserPlan, HabitMode, HabitTarget, CoachStyle, TimeToFirstCigarette, IfThenPlan } from '../../types';
 import { FAP_SETUP_NOTE, FAP_WARNINGS } from '../../content/fapGuidance';
+import { maskDiscreet } from '../../content/discreet';
 import { Sound } from '../../data/sound';
 import { ArrowRight, ArrowLeft, Check, Sparkles, Shield, Heart } from 'lucide-react';
 
@@ -14,6 +15,9 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   onFinishOnboarding,
 }) => {
   const [step, setStep] = useState(1);
+  // Discreet wording can be switched on from the very first screen, so nobody
+  // has to read the explicit words while setting the app up.
+  const [discreet, setDiscreet] = useState<boolean>(initialPlan.discreetMode === true);
 
   // Onboarding opens by asking which habit(s) this is about. The step order is
   // built from that answer, so a fap-only user never answers cigarette pricing.
@@ -207,6 +211,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
       triggers: triggers.length > 0 ? triggers : ['stress'],
       reasons: reasons.length > 0 ? reasons : ['health'],
       targets,
+      discreetMode: discreet,
       habitChoiceMade: true,
       fapStartDate: (() => {
         const [year, month, day] = fapStartDate.split('-').map(Number);
@@ -244,7 +249,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
               <span>Back</span>
             </button>
           ) : (
-            <span className="font-bold tracking-tight text-black dark:text-white">Tally</span>
+            <span className="font-bold tracking-tight text-black dark:text-white">Quiter</span>
           )}
           <span>
             Step {stepNumber} of {totalSteps}
@@ -283,7 +288,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
               ✓
             </div>
             <h2 className="text-3xl font-black tracking-tight">
-              Welcome to Tally.
+              Welcome to Quiter.
             </h2>
             <p className="text-sm text-[#5E5E5E] dark:text-[#A6A6A6]">
               A free, private tracker for the habits you want to stop. Calm mentor, careful doctor,
@@ -304,8 +309,8 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                   },
                   {
                     id: 'FAP' as HabitTarget,
-                    title: 'Porn or fap',
-                    desc: 'Compulsive porn use or masturbation',
+                    title: maskDiscreet('Porn or fap', discreet),
+                    desc: maskDiscreet('Compulsive porn use or masturbation', discreet),
                   },
                   {
                     id: 'BOTH' as const,
@@ -341,6 +346,28 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                 })}
               </div>
             </div>
+            {/* Privacy wording: neutral words everywhere, until turned off. */}
+            <button
+              onClick={() => {
+                Sound.tick();
+                setDiscreet(!discreet);
+              }}
+              aria-pressed={discreet}
+              className={`w-full p-3.5 rounded-2xl border text-left transition ${
+                discreet
+                  ? 'bg-black text-white dark:bg-white dark:text-black border-transparent'
+                  : 'bg-[#F2F2F2] dark:bg-[#141414] border-[#C4C4C4] dark:border-[#3D3D3D] text-black dark:text-white'
+              }`}
+            >
+              <span className="text-xs font-bold block">
+                Hide sensitive words {discreet ? '· On' : '· Off'}
+              </span>
+              <span className="text-[11px] opacity-75 block mt-0.5">
+                Replaces the explicit words with neutral ones everywhere in the app. You can
+                turn it off any time in Settings.
+              </span>
+            </button>
+
             <div className="p-3.5 rounded-2xl bg-[#F2F2F2] dark:bg-[#141414] border border-[#C4C4C4] dark:border-[#3D3D3D] text-xs space-y-1">
               <p className="font-bold text-black dark:text-white flex items-center gap-1.5">
                 <Shield className="w-4 h-4" />
@@ -508,9 +535,17 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                 </label>
                 <input
                   type="number"
+                  inputMode="decimal"
                   step="0.5"
-                  value={packPrice}
-                  onChange={(e) => setPackPrice(Number(e.target.value))}
+                  min={0}
+                  placeholder="0"
+                  value={packPrice === 0 ? '' : packPrice}
+                  onChange={(e) => {
+                    // Strip leading zeros so typing 240 after the default 0 does
+                    // not render as "0240".
+                    const raw = e.target.value.replace(/^0+(?=\d)/, '');
+                    setPackPrice(raw === '' ? 0 : Math.max(0, Number(raw)));
+                  }}
                   className="w-full h-12 px-3 rounded-2xl bg-[#F2F2F2] dark:bg-[#262626] border border-[#C4C4C4] dark:border-[#3D3D3D] text-lg font-bold font-mono"
                 />
               </div>
@@ -521,8 +556,13 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                 </label>
                 <input
                   type="number"
-                  value={cigsPerPack}
-                  onChange={(e) => setCigsPerPack(Number(e.target.value))}
+                  inputMode="numeric"
+                  min={1}
+                  value={cigsPerPack === 0 ? '' : cigsPerPack}
+                  onChange={(e) => {
+                    const raw = e.target.value.replace(/^0+(?=\d)/, '');
+                    setCigsPerPack(raw === '' ? 0 : Math.max(0, Number(raw)));
+                  }}
                   className="w-full h-12 px-3 rounded-2xl bg-[#F2F2F2] dark:bg-[#262626] border border-[#C4C4C4] dark:border-[#3D3D3D] text-lg font-bold font-mono"
                 />
               </div>
@@ -935,7 +975,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
               Gentle notifications
             </h2>
             <p className="text-sm text-[#5E5E5E] dark:text-[#A6A6A6]">
-              Tally will only send milestone celebrations and one proactive nudge before your toughest craving window. No spam. Quiet hours strictly respected.
+              Quiter will only send milestone celebrations and one proactive nudge before your toughest craving window. No spam. Quiet hours strictly respected.
             </p>
             <div className="p-4 rounded-3xl bg-[#F2F2F2] dark:bg-[#141414] border border-[#C4C4C4] dark:border-[#3D3D3D] text-xs space-y-1">
               <span className="font-bold block text-black dark:text-white">
@@ -951,8 +991,12 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         {/* STEP 16: PORN / FAP SETUP (only when that habit was chosen) */}
         {step === 16 && (
           <div className="space-y-4">
-            <h2 className="text-2xl font-bold tracking-tight">Porn & fap setup</h2>
-            <p className="text-xs text-[#5E5E5E] dark:text-[#A6A6A6]">{FAP_SETUP_NOTE}</p>
+            <h2 className="text-2xl font-bold tracking-tight">
+              {maskDiscreet('Porn & fap setup', discreet)}
+            </h2>
+            <p className="text-xs text-[#5E5E5E] dark:text-[#A6A6A6]">
+              {maskDiscreet(FAP_SETUP_NOTE, discreet)}
+            </p>
 
             <div className="p-4 rounded-3xl bg-[#F2F2F2] dark:bg-[#141414] border border-[#C4C4C4] dark:border-[#3D3D3D] space-y-3 text-xs">
               <div>
@@ -970,9 +1014,14 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                   <label className="font-bold block mb-1.5">Usual times / day</label>
                   <input
                     type="number"
+                    inputMode="numeric"
                     min={0}
-                    value={fapPerDay}
-                    onChange={(e) => setFapPerDay(Math.max(0, Number(e.target.value)))}
+                    placeholder="0"
+                    value={fapPerDay === 0 ? '' : fapPerDay}
+                    onChange={(e) => {
+                      const raw = e.target.value.replace(/^0+(?=\d)/, '');
+                      setFapPerDay(raw === '' ? 0 : Math.max(0, Number(raw)));
+                    }}
                     className="w-full h-11 px-3 rounded-2xl bg-white dark:bg-[#262626] border border-[#C4C4C4] dark:border-[#3D3D3D] text-sm font-mono font-bold"
                   />
                 </div>
@@ -980,9 +1029,14 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                   <label className="font-bold block mb-1.5">Daily target (0 = none)</label>
                   <input
                     type="number"
+                    inputMode="numeric"
                     min={0}
-                    value={fapGoalPerDay}
-                    onChange={(e) => setFapGoalPerDay(Math.max(0, Number(e.target.value)))}
+                    placeholder="0"
+                    value={fapGoalPerDay === 0 ? '' : fapGoalPerDay}
+                    onChange={(e) => {
+                      const raw = e.target.value.replace(/^0+(?=\d)/, '');
+                      setFapGoalPerDay(raw === '' ? 0 : Math.max(0, Number(raw)));
+                    }}
                     className="w-full h-11 px-3 rounded-2xl bg-white dark:bg-[#262626] border border-[#C4C4C4] dark:border-[#3D3D3D] text-sm font-mono font-bold"
                   />
                 </div>
@@ -993,8 +1047,12 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
               <span className="text-xs font-bold block">Warning signs to watch</span>
               {FAP_WARNINGS.slice(0, 4).map((warning) => (
                 <div key={warning.id}>
-                  <span className="text-[11px] font-bold block">{warning.title}</span>
-                  <p className="text-[11px] text-[#5E5E5E] dark:text-[#A6A6A6]">{warning.body}</p>
+                  <span className="text-[11px] font-bold block">
+                    {maskDiscreet(warning.title, discreet)}
+                  </span>
+                  <p className="text-[11px] text-[#5E5E5E] dark:text-[#A6A6A6]">
+                    {maskDiscreet(warning.body, discreet)}
+                  </p>
                 </div>
               ))}
             </div>
@@ -1027,14 +1085,15 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                 <span className="text-[#5E5E5E] dark:text-[#A6A6A6] block">Tracking:</span>
                 <span className="font-bold">
                   {targets.includes('SMOKE') && targets.includes('FAP')
-                    ? 'Smoking and porn/fap'
+                    ? maskDiscreet('Smoking and porn/fap', discreet)
                     : targets.includes('FAP')
-                      ? 'Porn/fap only'
+                      ? maskDiscreet('Porn/fap only', discreet)
                       : 'Smoking only'}
                 </span>
                 {targets.includes('FAP') && (
                   <p className="text-[11px] text-[#5E5E5E] dark:text-[#A6A6A6] mt-1">
-                    Fap-free timer from {fapStartDate} · target {fapGoalPerDay === 0 ? 'no slips' : `${fapGoalPerDay}/day`}
+                    {maskDiscreet('Fap-free', discreet)} timer from {fapStartDate} · target{' '}
+                    {fapGoalPerDay === 0 ? 'no slips' : `${fapGoalPerDay}/day`}
                   </p>
                 )}
               </div>
@@ -1093,8 +1152,9 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         )}
       </div>
 
-      {/* Bottom Action Button (Steps 1 to 14) */}
-      {step < 15 && (
+      {/* Bottom Action Button: every step except the final plan card (15), so the
+          fap setup step (16), which sits before it, also gets a Continue. */}
+      {step !== 15 && (
         <div className="max-w-lg mx-auto w-full pb-2">
           <button
             onClick={nextStep}
